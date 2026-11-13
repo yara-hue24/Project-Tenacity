@@ -112,3 +112,38 @@ test('route slicing uses the index lookup', () => {
   assert.equal(indexAtChain(route, 99), 3);
   assert.deepEqual(sliceRoute(route, 5, 25).map((q) => q.chain), [5, 10, 20, 25]);
 });
+
+// ---- photo picker ----
+import { navPointing, pickLandscape, compass } from '../js/photo.js';
+
+const frame = (id, boresight, type = 'full') => ({
+  imageid: id, sample_type: type, attitude: '(1,0,0,0)',          // rover level, nose pointing north
+  camera: { instrument: 'NAV_LEFT_B', camera_model_component_list: `(0,0,0);(${boresight});(0,0,0);(0,0,0);(0,0,0);(0,0,0)` },
+});
+
+test('pointing: level rover facing north', () => {
+  const ahead = navPointing(frame('NLB_1EDR_F0010002NCAM00001M_', '1,0,0'));
+  near(ahead.az, 0, 1e-9);
+  near(ahead.el, 0, 1e-9);
+  const rightAndDown = navPointing(frame('x', '0,0.866,0.5'));
+  near(rightAndDown.az, 90, 1e-6);
+  near(rightAndDown.el, -30, 0.01);
+  assert.equal(navPointing({ imageid: 'x', camera: {} }), null);
+});
+
+test('picker rejects the deck and prefers the wanted bearing', () => {
+  const images = [
+    frame('NLB_1EDR_F0010002NCAM00001M_', '-0.94,-0.2,0.28'),   // back-left across the deck, listed first
+    frame('NLB_2EDR_F0010002NCAM00002M_', '0.17,0.97,0.17'),    // to the right, east
+    frame('NLB_3EDR_F0010002NCAM00003M_', '0.97,0.17,0.17'),    // ahead, north
+    frame('NLB_4EDR_F0010009NCAM00004M_', '1,0,0'),             // another rover position
+  ];
+  assert.equal(pickLandscape(images, 1, 2, 0).im.imageid, 'NLB_3EDR_F0010002NCAM00003M_');
+  assert.equal(pickLandscape(images, 1, 2, 90).im.imageid, 'NLB_2EDR_F0010002NCAM00002M_');
+  assert.equal(pickLandscape(images, 1, 2, 0).tier, 0);
+  assert.ok(pickLandscape(images.slice(0, 1), 1, 2).tier >= 2);   // only a deck shot exists: still returned, flagged as deck
+  assert.equal(pickLandscape(images, 7, 7), null);
+  assert.equal(compass(20), 'NNE');
+  assert.equal(compass(359), 'N');
+  assert.equal(compass(-90), 'W');
+});

@@ -254,6 +254,15 @@ button.row:hover { background: var(--raise); }
 .stepper button { width: 48px; padding: 0; font: 500 20px var(--mono); }
 .stepper output { min-width: 86px; text-align: center; font: 500 16px var(--mono); }
 
+/* What the rock is made of: one thin bar per mineral. */
+.rock { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.rock .k { font-size: 10px; color: var(--muted); margin-bottom: 8px; display: block; }
+.bar { display: grid; grid-template-columns: 104px minmax(0, 1fr) 50px; align-items: center; gap: 10px; min-height: 24px; font-size: 14px; }
+.bar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar i { height: 6px; background: var(--hair); border-radius: 1px; overflow: hidden; }
+.bar b { display: block; height: 100%; background: var(--text); }
+.bar em { font: 500 12.5px var(--mono); font-style: normal; text-align: right; }
+.rock .small { margin: 8px 0 0; }
 details.more { margin-top: 14px; border-top: 1px solid var(--hair); }
 details.more summary { list-style: none; cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 14px; }
 details.more summary::-webkit-details-marker { display: none; }

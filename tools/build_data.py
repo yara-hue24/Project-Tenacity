@@ -120,18 +120,55 @@ def nearest_chain(route, lon, lat):
     return best[3], ground_m(best, (lon, lat))
 
 
-def pick_photo(sol, next_sol, site, drive):
-    """First full-frame left Navcam image taken at this exact rover position."""
-    tag = re.compile(r"_F(\d{3})(\d{4})NCAM")
-    for s in range(sol, min(next_sol, sol + 4)):
+COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+
+
+def nav_pointing(im):
+    """Where a Navcam frame looks: compass azimuth, elevation, and azimuth relative to the rover's nose.
+
+    Mirrors js/photo.js. The feed gives the CAHVOR camera model in the rover frame (A is the
+    boresight) and the rover-to-local-level quaternion (w, x, y, z).
+    """
+    try:
+        nums = lambda t: [float(v) for v in t.strip("()").split(",")]
+        vx, vy, vz = nums(im["camera"]["camera_model_component_list"].split(";")[1])
+        w, x, y, z = nums(im["attitude"])
+    except (KeyError, IndexError, ValueError):
+        return None
+    tx, ty, tz = 2 * (y * vz - z * vy), 2 * (z * vx - x * vz), 2 * (x * vy - y * vx)
+    north = vx + w * tx + (y * tz - z * ty)
+    east = vy + w * ty + (z * tx - x * tz)
+    down = vz + w * tz + (x * ty - y * tx)
+    return {
+        "az": math.degrees(math.atan2(east, north)) % 360,
+        "el": -math.degrees(math.asin(max(-1.0, min(1.0, down)))),
+        "rover_az": math.degrees(math.atan2(vy, vx)) % 360,
+    }
+
+
+def pick_photo(sol, next_sol, site, drive, bearing):
+    """Best left-Navcam frame at this rover position: no deck, horizon in view, looking along the track."""
+    tag = re.compile(r"_[FS](\d{3})(\d{4})NCAM")
+    best = None
+    for s in range(sol, min(next_sol, sol + 3)):
         feed = fetch(IMAGES_URL.format(sol=s), f"images_{s}.json")
         for im in feed.get("images", []):
-            if im["camera"]["instrument"] != "NAV_LEFT_B" or im["sample_type"] != "full":
-                continue
             m = tag.search(im["imageid"])
-            if m and int(m.group(1)) == site and int(m.group(2)) == drive:
-                return im
-    return None
+            if not m or not im["camera"]["instrument"].startswith("NAV_LEFT") or int(m.group(1)) != site or int(m.group(2)) != drive:
+                continue
+            p = nav_pointing(im)
+            if not p:
+                continue
+            deck = 165 < p["rover_az"] < 335
+            horizon = -25 <= p["el"] <= 8
+            tier = 0 if (not deck and horizon) else 1 if not deck else 2 if horizon else 3
+            off = abs((p["az"] - bearing + 540) % 360 - 180) if bearing is not None else 0
+            score = tier * 1000 + abs(p["el"] + 10) + 0.15 * off + (0 if im["sample_type"] == "full" else 6)
+            if best is None or score < best[0]:
+                best = (score, tier, im, p)
+        if best and best[1] == 0:
+            break
+    return best
 
 
 def rover_now(feed):
@@ -189,6 +226,7 @@ def main():
 
     PHOTOS.mkdir(parents=True, exist_ok=True)
     stops = []
+    deck_shots = 0
     for i, f in enumerate(wps):
         p = f["properties"]
         k = key((p["lon"], p["lat"]))
@@ -206,17 +244,25 @@ def main():
         if off > 2:
             print(f"warn: waypoint sol {p['sol']} is {off:.1f} m off the route", file=sys.stderr)
         bundled = PHOTO_SOL_FIRST <= p["sol"] <= PHOTO_SOL_LAST
-        im = pick_photo(p["sol"], max(next_sol, p["sol"] + 1), p["site"], p["drive"]) if bundled else None
-        if im:
+        bearing = None
+        if i + 1 < len(wps):
+            q = wps[i + 1]["properties"]
+            bearing = math.degrees(math.atan2((q["lon"] - p["lon"]) * math.cos(math.radians(p["lat"])), q["lat"] - p["lat"])) % 360
+        pick = pick_photo(p["sol"], max(next_sol, p["sol"] + 1), p["site"], p["drive"], bearing) if bundled else None
+        if pick:
+            _, tier, im, look = pick
             name = f"{p['RMC']}.jpg"
-            (PHOTOS / name).write_bytes(fetch(im["image_files"]["medium"], f"photo_{name}", binary=True))
+            url = im["image_files"]["medium"].replace("http://", "https://")
+            (PHOTOS / name).write_bytes(fetch(url, f"photo_{im['imageid']}.jpg", binary=True))
             stop["photo"] = {
                 "file": f"data/photos/{name}",
                 "sol": im["sol"],
                 "taken_utc": im["date_taken_utc"][:19],
                 "page": im["link"],
                 "credit": im["credit"],
+                "looking": COMPASS[round(look["az"] / 22.5) % 16],
             }
+            deck_shots += tier >= 2
         stops.append(stop)
 
     latest = next(s for s in weather["soles"] if s["max_temp"] not in ("--", "", None))
@@ -251,7 +297,7 @@ def main():
 
     with_photo = sum(1 for s in stops if "photo" in s)
     print(f"route points: {len(route)}  length: {route[-1][3]:.0f} m")
-    print(f"stops: {len(stops)}  with photo: {with_photo}")
+    print(f"stops: {len(stops)}  with photo: {with_photo}  of which only a deck view exists: {deck_shots}")
     print(f"weather: sol {site['weather']['sol']} ({site['weather']['earth_date']})")
     build_rovers()
 

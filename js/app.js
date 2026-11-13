@@ -1,4 +1,5 @@
 import * as M from './model.js';
+import { pickLandscape, compass } from './photo.js';
 
 const TILES = 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/';
 const STORE = 'tenacity.v2';
@@ -27,9 +28,9 @@ const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const pct = (f) => `${(Math.max(0, Math.min(1, f)) * 100).toFixed(1)}%`;
 
 const S = {
-  site: null, cfg: null, rovers: [], roversAt: null, byId: new Map(), slopes: [],
+  site: null, cfg: null, rovers: [], roversAt: null, minerals: null, terrain: null, byId: new Map(), slopes: [],
   p: { ...M.DEFAULTS }, trip: null, plan: null, t: 0, selected: null,
-  show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true },
+  show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true, samples: true, slope: false, loose: false },
 };
 // What is open. The default screen shows the answer, the stop list and the map; the rest opens on request.
 const UI = { more: false, walk: true, drawer: null, profile: false, meas: false, clock: false };
@@ -79,8 +80,21 @@ function derive() {
 }
 
 const target = (stop) => S.cfg.targets[stop.id];
-const stopName = (stop) => (target(stop) ? target(stop).name : `Sol ${stop.sol} stop`);
-const stopKind = (stop) => (target(stop) ? target(stop).kind : `Curiosity stop · sol ${stop.sol}`);
+const samplesAt = (stop) => S.minerals.stops[stop.id] || [];
+// A stop is named by its hand-written entry, else by the sample NASA analysed there, else by its sol.
+function stopName(stop) {
+  if (target(stop)) return target(stop).name;
+  const sm = samplesAt(stop);
+  if (sm.length === 1) return sm[0].sample;
+  if (sm.length) return sm[0].sample.replace(/ (scoop )?\d$/, '');   // "Glen Etive 1" and "Glen Etive 2" share a stop
+  return `Sol ${stop.sol} stop`;
+}
+function stopKind(stop) {
+  if (target(stop)) return target(stop).kind;
+  const sm = samplesAt(stop);
+  if (sm.length) return `${sm[0].kind === 'scoop' ? 'Sand scooped' : 'Rock drilled'} and analysed here · sol ${stop.sol}`;
+  return `Curiosity stop · sol ${stop.sol}`;
+}
 const planIndex = (id) => S.plan.stops.findIndex((s) => s.id === id);
 
 // ---------- map ----------
@@ -118,23 +132,25 @@ function initMap() {
   map.addControl(new Tools());
   map.createPane('names').style.zIndex = 350;
   map.getPane('names').style.pointerEvents = 'none';
-  [['ground', 410], ['route', 420], ['dots', 430]].forEach(([name, z]) => { map.createPane(name).style.zIndex = z; });
+  [['terrain', 405], ['ground', 410], ['route', 420], ['dots', 430]].forEach(([name, z]) => { map.createPane(name).style.zIndex = z; });
 
   // Whole planet at the bottom, so zooming out from a walk ends at Mars itself.
-  L.tileLayer(GLOBAL_TILES, { maxNativeZoom: 7, maxZoom: 20, attribution: 'Global basemap: OpenPlanetaryMap' }).addTo(map);
+  // zIndex is set on every image layer: they are added at different moments, and without it
+  // the coarse layers can end up drawn over the sharp ones.
+  L.tileLayer(GLOBAL_TILES, { zIndex: 1, maxNativeZoom: 7, maxZoom: 20, attribution: 'Global basemap: OpenPlanetaryMap' }).addTo(map);
   G.ctx = L.tileLayer(`${TILES}MSL_CTX_ortho_mosaic_6m/{z}/{x}/{y}.png`, {
-    tms: true, minZoom: 6, maxNativeZoom: 13, maxZoom: 20, attribution: 'CTX: NASA/JPL-Caltech/MSSS',
+    tms: true, zIndex: 2, minZoom: 6, maxNativeZoom: 13, maxZoom: 20, attribution: 'CTX: NASA/JPL-Caltech/MSSS',
     bounds: [[-7.8441, 135.9788], [-3.3971, 139.4859]],
   }).addTo(map);
   // Jezero Crater, where Perseverance is: NASA's regional and close-up mosaics from its location map.
   L.tileLayer(`${M20_TILES}HMC_13E10_co5_colorcorrect_rect/{z}/{x}/{y}.png`, {
-    tms: true, minZoom: 6, maxNativeZoom: 12, maxZoom: 20, bounds: [[15.0, 67.4993], [30.0006, 78.7492]], attribution: 'HRSC: ESA/DLR/FU Berlin',
+    tms: true, zIndex: 2, minZoom: 6, maxNativeZoom: 12, maxZoom: 20, bounds: [[15.0, 67.4993], [30.0006, 78.7492]], attribution: 'HRSC: ESA/DLR/FU Berlin',
   }).addTo(map);
   L.tileLayer(`${M20_TILES}M20_HiRISE_RGB_CTX_mosaic_25cm_v7_Merge_LERC_clip/{z}/{x}/{y}.png`, {
-    tms: true, minZoom: 10, maxNativeZoom: 19, maxZoom: 20, bounds: [[18.2371, 77.1575], [18.5206, 77.5115]],
+    tms: true, zIndex: 3, minZoom: 10, maxNativeZoom: 19, maxZoom: 20, bounds: [[18.2371, 77.1575], [18.5206, 77.5115]],
   }).addTo(map);
   G.hirise = L.tileLayer(`${TILES}MSL_Gale_HiRISE-LRGB_78quads/{z}/{x}/{y}.png`, {
-    tms: true, minNativeZoom: 10, maxNativeZoom: 18, maxZoom: 20,
+    tms: true, zIndex: 3, minNativeZoom: 10, maxNativeZoom: 18, maxZoom: 20,
     bounds: [[-4.8756, 137.3267], [-4.5551, 137.4786]],
     attribution: 'HiRISE: NASA/JPL-Caltech/Univ. of Arizona',
   });
@@ -150,6 +166,16 @@ function initMap() {
   G.dots = L.layerGroup(S.site.stops.flatMap((s) => [
     L.circleMarker(ll(s), { pane: 'dots', radius: 3.5, color: C.bg, weight: 1.5, fillColor: '#fff', fillOpacity: 1, interactive: false }),
     L.circleMarker(ll(s), { pane: 'dots', radius: 13, stroke: false, fillOpacity: 0 }).on('click', () => select(s.id)),
+  ]));
+  // Terrain overlays, off until asked for: slope from the 1 m elevation model, loose ground from thermal inertia.
+  G.slope = L.imageOverlay(S.terrain.slope.file, S.terrain.bounds, { pane: 'terrain', interactive: false });
+  G.loose = looseGroundLayer();
+
+  // Stops where CheMin measured the minerals in a drilled or scooped sample: a ring, readable from further out.
+  G.samples = L.layerGroup(S.site.stops.filter((s) => samplesAt(s).length).flatMap((s) => [
+    L.circleMarker(ll(s), { pane: 'dots', radius: 8, color: C.bg, weight: 5, fill: false, interactive: false }),
+    L.circleMarker(ll(s), { pane: 'dots', radius: 8, color: C.bone, weight: 2.25, fillColor: C.bg, fillOpacity: 0.55 }).on('click', () => select(s.id)),
+    L.circleMarker(ll(s), { pane: 'dots', radius: 2, stroke: false, fillColor: C.bone, fillOpacity: 1, interactive: false }),
   ]));
   G.dyn = L.layerGroup().addTo(map);
   G.rovers = L.layerGroup().addTo(map);
@@ -262,6 +288,61 @@ function fitPlan() {
   });
 }
 
+// Loose ground drawn as stipple, the map convention for sand. It is painted on a canvas at screen
+// resolution, so the dots stay the same small size at every zoom instead of swelling into blocks.
+function looseGroundLayer() {
+  const { grid, width, height, legend } = S.terrain.loose;
+  const [[south, west], [north, east]] = S.terrain.bounds;
+  const canvas = L.DomUtil.create('canvas', 'leaflet-zoom-hide');
+  canvas.style.pointerEvents = 'none';
+  let patterns = null;
+
+  const stipple = (ctx, pitch) => {
+    const tile = document.createElement('canvas');
+    tile.width = tile.height = pitch * 2;
+    const t = tile.getContext('2d');
+    t.fillStyle = C.bone;
+    for (const [x, y] of [[0, 0], [pitch, pitch]]) { t.beginPath(); t.arc(x + 1.5, y + 1.5, 1.1, 0, 7); t.fill(); }
+    return ctx.createPattern(tile, 'repeat');
+  };
+
+  const draw = () => {
+    const size = map.getSize();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = size.x * ratio;
+    canvas.height = size.y * ratio;
+    canvas.style.width = `${size.x}px`;
+    canvas.style.height = `${size.y}px`;
+    L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    if (map.getZoom() < 12) return;          // from far away the cells are smaller than a dot
+    patterns = Object.fromEntries(legend.map((l) => [l.class, stipple(ctx, l.pitch)]));
+
+    // Column and row edges on screen. The map projection treats longitude and latitude separately.
+    const xs = Array.from({ length: width + 1 }, (_, i) => map.latLngToContainerPoint([north, west + ((east - west) * i) / width]).x);
+    const ys = Array.from({ length: height + 1 }, (_, j) => map.latLngToContainerPoint([north - ((north - south) * j) / height, west]).y);
+    for (let j = 0; j < height; j++) {
+      if (ys[j + 1] < 0 || ys[j] > size.y) continue;
+      const row = grid[j];
+      for (let i = 0; i < width; i++) {
+        if (row[i] === '0' || xs[i + 1] < 0 || xs[i] > size.x) continue;
+        let run = i;                           // merge neighbours of the same class into one rectangle
+        while (run + 1 < width && row[run + 1] === row[i]) run++;
+        ctx.fillStyle = patterns[row[i]];
+        ctx.fillRect(xs[i], ys[j], xs[run + 1] - xs[i] + 0.5, ys[j + 1] - ys[j] + 0.5);
+        i = run;
+      }
+    }
+  };
+
+  const Layer = L.Layer.extend({
+    onAdd() { map.getPane('terrain').appendChild(canvas); map.on('moveend resize', draw); draw(); },
+    onRemove() { canvas.remove(); map.off('moveend resize', draw); },
+  });
+  return new Layer();
+}
+
 const icon = (cls, text, size = 26) => L.divIcon({
   className: '', iconSize: [size, size], iconAnchor: [size / 2, size / 2],
   html: `<div class="mk ${cls}" style="width:${size}px;height:${size}px">${text}</div>`,
@@ -304,8 +385,8 @@ function renderMap() {
   const slice = (a, b) => M.sliceRoute(route, a, b).map(ll);
 
   $('#map').classList.toggle('muted-terrain', S.show.muted);
-  for (const k of ['hirise', 'names', 'ground', 'dots']) {
-    const on = S.show[k] && (k !== 'dots' || map.getZoom() >= DOTS_MIN_ZOOM);
+  for (const k of ['hirise', 'names', 'slope', 'loose', 'ground', 'dots', 'samples']) {
+    const on = S.show[k] && (k !== 'dots' || map.getZoom() >= DOTS_MIN_ZOOM) && (k !== 'samples' || map.getZoom() >= 12);
     if (on && !map.hasLayer(G[k])) map.addLayer(G[k]);
     if (!on && map.hasLayer(G[k])) map.removeLayer(G[k]);
   }
@@ -338,7 +419,9 @@ function renderMap() {
   add(L.marker(ll(D.base), { icon: icon('mk-refuge', 'R', 26), zIndexOffset: 500 }).on('click', () => select(D.base.id)));
   D.stops.forEach((s, i) => {
     if (!close) return;
-    add(L.marker(ll(s.stop), { icon: flag('', esc(stopName(s.stop)), 30, i % 2 ? 24 : -24), interactive: false, zIndexOffset: 300 }));
+    if (target(s.stop) || samplesAt(s.stop).length) {
+      add(L.marker(ll(s.stop), { icon: flag('', esc(stopName(s.stop)), 30, i % 2 ? 24 : -24), interactive: false, zIndexOffset: 300 }));
+    }
     add(L.marker(ll(s.stop), { icon: icon('mk-stop', i + 1), zIndexOffset: 400 }).on('click', () => select(s.id)));
   });
 
@@ -546,9 +629,22 @@ function layersHTML() {
       ${check('muted', 'Mute terrain colour so alerts stand out')}
       ${check('ground', 'Ground Curiosity has driven')}
       ${check('dots', 'Curiosity stops, with photos')}
+      ${check('samples', 'Sample sites, with measured minerals')}
       ${check('reach', 'Walk-back limit')}
       ${check('names', 'NASA place names')}
     </div>
+
+    <h2>Terrain from orbit</h2>
+    <div class="layer-list">
+      ${check('slope', 'Slope, from the 1 m elevation model')}
+      ${check('loose', 'Loose ground, from thermal inertia')}
+    </div>
+    <div class="legend" style="margin-top:10px">
+      ${S.terrain.slope.legend.map((l) => `<svg width="36" height="16"><rect width="36" height="16" fill="#6b6259"/><rect width="36" height="16" fill="rgba(${l.rgba.slice(0, 3).join(',')},${(l.rgba[3] / 255).toFixed(2)})"/></svg><span>${esc(l.label)}</span>`).join('')}
+      ${S.terrain.loose.legend.map((l) => `<svg width="36" height="16"><rect width="36" height="16" fill="#6b6259"/>${[0, 1, 2].flatMap((r) => Array.from({ length: Math.ceil(36 / l.pitch) + 1 }, (_, i) => `<circle cx="${i * l.pitch + (r % 2 ? l.pitch / 2 : 0)}" cy="${2 + (r * l.pitch) / 2}" r="1.1" fill="${C.bone}"/>`)).join('')}</svg><span>${esc(l.label)}</span>`).join('')}
+    </div>
+    <p class="small" style="margin-top:10px"><span class="tag measured">MEASURED</span> Slope is from MRO HiRISE stereo images, at about 6 m per pixel. Checked against the tilt Curiosity recorded at its ${S.terrain.slope.check.stops.toLocaleString('en-GB')} stops: median difference ${S.terrain.slope.check.median_difference_from_rover_tilt_deg}°. ${(S.terrain.slope.share_above_suit_limit * 100).toFixed(0)}% of this area is steeper than the ${S.terrain.suit_limit_deg}° suit limit.</p>
+    <p class="small"><span class="tag derived">DERIVED</span> Loose ground is read from Mars Odyssey THEMIS thermal inertia at 100 m per pixel: ground that cools fast at night is usually sand or dust. It is a hint, far coarser than a footstep.</p>
 
     <h2>Legend</h2>
     <div class="legend">
@@ -558,6 +654,8 @@ function layersHTML() {
       ${line(C.walked)}<span>Ground already walked</span>
       ${line(C.ground)}<span>Ground Curiosity has driven</span>
       ${line(C.caution, 'stroke-dasharray="1 8" stroke-linecap="round"')}<span>Beyond the walk-back limit right now</span>
+      <svg width="36" height="24"><circle cx="18" cy="12" r="7.5" fill="none" stroke="${C.bone}" stroke-width="2.25"/><circle cx="18" cy="12" r="2" fill="${C.bone}"/></svg><span>Sample site: minerals measured by Curiosity</span>
+      <svg width="36" height="24"><rect x="12" y="6" width="12" height="12" rx="1.5" transform="rotate(45 18 12)" fill="${C.bone}"/></svg><span>Where a rover is now</span>
       <svg width="36" height="24"><circle cx="18" cy="12" r="9" fill="none" stroke="${C.select}" stroke-width="2.5"/></svg><span>Selected</span>
     </div>
 
@@ -598,6 +696,9 @@ const SOURCES = [
   ['Walking speed', '3.3 km/h', 'assumed', 'ASSUMED', 'Apollo 15 traverse planning. No suited Mars walking speed has been measured.', 'https://www.nasa.gov/history/alsj/'],
   ['Slow factor', '1.5×', 'assumed', 'ASSUMED', 'Our choice. Analog crews found planned walk times too optimistic.', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6442304'],
   ['Stop names and science notes', 'Curiosity mission blog', 'measured', 'MEASURED', 'NASA Science', 'https://science.nasa.gov/mission/msl-curiosity/'],
+  ['Minerals at sample sites', '48 drilled and scooped samples', 'measured', 'MEASURED', 'Curiosity CheMin X-ray diffraction, NASA PDS Geosciences Node', 'https://pds-geosciences.wustl.edu/missions/msl/chemin.htm'],
+  ['Slope overlay', '1 m elevation model, 6 m slope', 'measured', 'MEASURED', 'MRO HiRISE stereo model served by NASA Mars Trek (Gale_DEM_SMG_1m)', 'https://trek.nasa.gov/mars/'],
+  ['Loose-ground overlay', 'Thermal inertia, 100 m', 'derived', 'DERIVED', 'Mars Odyssey THEMIS thermal inertia mosaic, ASU JMARS', 'https://jmars.asu.edu/'],
   ['Where the rovers are now', 'End of each rover\'s last drive', 'measured', 'MEASURED', 'NASA/JPL-Caltech rover position feeds, read when the page loads', 'https://science.nasa.gov/mission/mars-2020-perseverance/location-map/'],
   ['Mars local time', 'Mars24 algorithm', 'derived', 'DERIVED', 'Allison & McEwen 2000, NASA GISS', 'https://www.giss.nasa.gov/tools/mars24/help/algorithm.html'],
   ['Whole-planet basemap', 'Viking and MOLA mosaic', 'measured', 'MEASURED', 'OpenPlanetaryMap, from NASA/USGS data', 'https://www.openplanetary.org/opm'],
@@ -631,25 +732,56 @@ function renderDrawer() {
 
 // ---------- stop card ----------
 
-// Photos are bundled for the boxwork stops. Every other stop asks NASA's raw-image feed
-// for the first full Navcam frame taken at that exact rover position.
+// Photos are bundled for the boxwork stops. Every other stop asks NASA's raw-image feed for the
+// Navcam frames taken at that exact rover position and keeps the one that looks along the track
+// toward the next stop, with the horizon in view and no rover deck (see photo.js).
 async function loadPhoto(s) {
   s.photoState = 'loading';
   const [site, drive] = s.id.split('_').map(Number);
   const next = S.site.stops[S.site.stops.indexOf(s) + 1];
   const lastSol = Math.min(next ? Math.max(next.sol - 1, s.sol) : s.sol, s.sol + 2);
+  const bearing = next ? M.bearingDeg(s, next) : null;
   try {
-    for (let sol = s.sol; sol <= lastSol && !s.photo; sol++) {
+    let best = null;
+    for (let sol = s.sol; sol <= lastSol && !(best && best.tier === 0); sol++) {
       const feed = await fetch(PHOTO_FEED + sol).then((r) => r.json());
-      const im = (feed.images || []).find((x) => {
-        const m = /_F(\d{3})(\d{4})/.exec(x.imageid);
-        return /^NAV_LEFT/.test(x.camera.instrument) && x.sample_type === 'full' && m && Number(m[1]) === site && Number(m[2]) === drive;
-      });
-      if (im) s.photo = { url: im.image_files.medium, sol: im.sol, page: im.link, credit: im.credit };
+      const pick = pickLandscape(feed.images || [], site, drive, bearing);
+      if (pick && (!best || pick.score < best.score)) best = pick;
     }
-    s.photoState = s.photo ? 'ok' : 'none';
+    if (best) {
+      s.photo = {
+        url: best.im.image_files.medium.replace(/^http:/, 'https:'),   // older sols are listed as http
+        sol: best.im.sol, page: best.im.link, credit: best.im.credit, looking: compass(best.pointing.az),
+      };
+    }
+    s.photoState = best ? 'ok' : 'none';
   } catch { s.photoState = 'offline'; }
   if (S.selected === s.id) renderStopCard();
+}
+
+// What the orbital layers say about the ground at this stop.
+function orbitalFacts(s) {
+  const v = S.terrain.stops[s.id];
+  if (!v) return '';
+  const [slope, ti] = v;
+  const ground = ti === null ? '' : ` · thermal inertia ${ti} TIU, ${ti < 300 ? 'loose sand or dust likely' : ti < 400 ? 'mixed ground' : 'firm or rocky ground'}`;
+  const steep = slope > S.terrain.suit_limit_deg;
+  return `<p class="legfacts">From orbit: ${steep ? `<span class="flag">${ICO.caution}slope ${slope.toFixed(0)}°, above the suit limit</span>` : `slope ${slope.toFixed(0)}°`}${ground}</p>`;
+}
+
+// What Curiosity's CheMin instrument found in the sample analysed at this stop.
+function rockHTML(s) {
+  return samplesAt(s).map((sm) => {
+    const top = sm.minerals.slice(0, 4);
+    const rest = sm.minerals.slice(4);
+    const whole = [sm.clay_pct !== null ? `clay ${sm.clay_pct}%` : '', sm.amorphous_pct !== null ? `non-crystalline ${sm.amorphous_pct}%` : ''].filter(Boolean).join(', ');
+    return `<div class="rock">
+      <div class="k">Minerals in ${esc(sm.sample)} · sol ${sm.sol}</div>
+      ${top.map(([name, pct]) => `<div class="bar"><span>${esc(name)}</span><i><b style="width:${Math.min(100, pct)}%"></b></i><em>${pct}%</em></div>`).join('')}
+      <p class="small">${rest.length ? `Also ${rest.map(([n, v]) => `${esc(n.toLowerCase())} ${v}%`).join(', ')}. ` : ''}Shares of the crystalline part.${whole ? ` Of the whole sample: ${whole}.` : ''}</p>
+      <p class="small"><span class="tag measured">MEASURED</span> X-ray diffraction by Curiosity's CheMin while parked here. <a href="${S.minerals.source_url}${sm.product}.lbl" target="_blank" rel="noopener">NASA PDS record</a></p>
+    </div>`;
+  }).join('');
 }
 
 function renderStopCard() {
@@ -665,7 +797,7 @@ function renderStopCard() {
   const waiting = { loading: "Loading Curiosity's view from NASA", none: 'No Navcam frame found for this stop', offline: 'The photo needs a connection to NASA' }[s.photoState];
   const photo = s.photo
     ? `<figure><img src="${s.photo.file || s.photo.url}" alt="Curiosity Navcam view from this stop">
-        <figcaption><span>Navcam · sol ${s.photo.sol}</span><a href="${s.photo.page}" target="_blank" rel="noopener" title="Open the raw image on NASA's site">${esc(s.photo.credit)}</a></figcaption></figure>`
+        <figcaption><span>Navcam · sol ${s.photo.sol}${s.photo.looking ? ` · looking ${s.photo.looking}` : ''}</span><a href="${s.photo.page}" target="_blank" rel="noopener" title="Open the raw image on NASA's site">${esc(s.photo.credit)}</a></figcaption></figure>`
     : `<div class="nophoto">${waiting}</div>`;
   const at = S.site.stops.indexOf(s);
   const near = (n, label) => (n
@@ -702,6 +834,7 @@ function renderStopCard() {
       <div class="kicker">${isRefuge ? 'Pressurised rover parked here' : esc(stopKind(s))}</div>
       ${plan}
       ${t ? `<p class="note">${esc(t.note)} <a href="${t.source}" target="_blank" rel="noopener">${esc(t.source_label)}</a></p>` : ''}
+      ${rockHTML(s)}
       <details class="more" ${UI.meas ? 'open' : ''}>
         <summary>Measurements${CHEV}</summary>
         <dl class="trio">
@@ -710,6 +843,7 @@ function renderStopCard() {
           <div><dt>Rover tilt</dt><dd>${s.tilt_deg.toFixed(0)}°</dd></div>
         </dl>
         ${leg}
+        ${orbitalFacts(s)}
         <p class="small"><span class="tag measured">MEASURED</span> Position, elevation and tilt from Curiosity's own localisation, sol ${s.sol}.</p>
       </details>
       ${isRefuge ? '' : `<div class="actions">
@@ -1136,7 +1270,10 @@ function wire() {
 }
 
 async function main() {
-  const [site, cfg, rovers] = await Promise.all(['data/site.json', 'data/targets.json', 'data/rovers.json'].map((u) => fetch(u).then((r) => r.json())));
+  const [site, cfg, rovers, minerals, terrain] = await Promise.all(
+    ['data/site.json', 'data/targets.json', 'data/rovers.json', 'data/minerals.json', 'data/overlays/overlays.json'].map((u) => fetch(u).then((r) => r.json())));
+  S.minerals = minerals;
+  S.terrain = terrain;
   S.site = site;
   S.cfg = cfg;
   S.rovers = rovers.rovers;

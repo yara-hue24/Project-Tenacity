@@ -41,10 +41,12 @@ Tests for the walk model:
 node --test tests/*.mjs
 ```
 
-Refresh the NASA data snapshot (Python standard library only):
+Refresh the data snapshots (Python standard library only):
 
 ```sh
 python3 tools/build_data.py
+python3 tools/build_minerals.py
+python3 tools/build_overlays.py
 ```
 
 ## Layout
@@ -56,9 +58,14 @@ python3 tools/build_data.py
 | `js/app.js` | Map, status strip, plan panel, timeline, cuff card |
 | `data/site.json` | Snapshot of Curiosity's whole route, its 1,388 stops and the latest weather |
 | `data/photos/` | One Curiosity Navcam frame for each boxwork stop; other stops load theirs from NASA when opened |
+| `data/minerals.json` | What Curiosity's CheMin instrument measured in 48 drilled and scooped samples, placed on the stops where they were analysed |
+| `data/overlays/` | Slope image from the 1 m elevation model, loose-ground grid from thermal inertia, and both sampled at every stop |
 | `data/rovers.json` | Where Curiosity and Perseverance are now, plus Perseverance's track; refreshed from NASA when the page loads |
 | `data/targets.json` | Ready-made walks, science goals, named stops with their NASA sources |
-| `tools/build_data.py` | Rebuilds the snapshot from NASA's public feeds |
+| `tools/build_data.py` | Rebuilds the route, stops, photos, weather and rover positions from NASA's public feeds |
+| `tools/build_minerals.py` | Rebuilds the mineral table from NASA's PDS CheMin archive |
+| `tools/build_overlays.py` | Rebuilds the terrain overlays from NASA Mars Trek and ASU JMARS |
+| `js/photo.js` | Picks a Navcam frame that shows the ground ahead, not the rover's deck |
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause) |
 | `vendor/fonts/` | Inter and DM Mono, the typefaces NASA's own sites use (SIL Open Font License) |
 
@@ -71,6 +78,9 @@ python3 tools/build_data.py
 | Navcam photo at each stop | Optical | Curiosity raw images, NASA/JPL-Caltech |
 | Daily weather and sunset | Atmospheric | Curiosity REMS, NASA/JPL-Caltech/CAB |
 | Surface dose rate | Radiation | Curiosity RAD, Hassler et al. 2014 |
+| Minerals in drilled and scooped samples | Chemical | Curiosity CheMin X-ray diffraction, NASA PDS Geosciences Node |
+| Slope overlay, 6 m | Topographic | MRO HiRISE 1 m elevation model, served by NASA Mars Trek |
+| Loose-ground overlay, 100 m | Thermal | Mars Odyssey THEMIS thermal inertia, ASU JMARS |
 | Oxygen use, walk-back effort | Life support | NASA BVAD Rev 2 (2022) |
 | Stop names and science notes | – | NASA Curiosity mission blog |
 
@@ -82,6 +92,8 @@ The map zooms out to the whole planet (OpenPlanetaryMap basemap, from NASA/USGS 
 
 ## Known limits
 
+- The slope overlay was checked against the tilt Curiosity recorded at its 1,388 stops: the median difference is 1.7°. The loose-ground overlay is a 100 m hint, not a footing map.
+- A mineral result is placed where the rover was parked for the sample's first analysis, which is normally where it was collected. Samples analysed elsewhere are left out.
 - The route stays on Curiosity's track. That is the only ground measured at walking scale; rocks and sand off the track are not modelled.
 - Weather is the latest record in NASA's public feed, which can be months old. The app flags its age.
 - No solar-storm feed is connected. Routine radiation dose is shown for context and does not drive the verdict.
