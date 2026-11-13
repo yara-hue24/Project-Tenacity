@@ -59,7 +59,7 @@ python3 tools/build_data.py
 | `data/targets.json` | Ready-made walks, science goals, named stops with their NASA sources |
 | `tools/build_data.py` | Rebuilds the snapshot from NASA's public feeds |
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause) |
-| `vendor/fonts/` | Martian Mono and Instrument Sans (SIL Open Font License) |
+| `vendor/fonts/` | Inter and DM Mono, the typefaces NASA's own sites use (SIL Open Font License) |
 
 ## Data
 

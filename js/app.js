@@ -688,7 +688,7 @@ function renderBand() {
     const right = limitRight;
     limit = `<rect x="${bx}" y="16" width="${x(tl.endT) - bx}" height="${H - 20}" fill="url(#band-hatch)"/>
       <line x1="${bx}" y1="2" x2="${bx}" y2="${H - 2}" stroke="${C.warning}" stroke-width="2"/>
-      <text x="${bx + (right ? -6 : 6)}" y="11" text-anchor="${right ? 'end' : 'start'}" style="fill:${C.warning};font-weight:700">LIMIT ${M.clockAt(S.p, D.res.breakAt.t)}</text>`;
+      <text x="${bx + (right ? -6 : 6)}" y="11" text-anchor="${right ? 'end' : 'start'}" style="fill:${C.warning}">LIMIT ${M.clockAt(S.p, D.res.breakAt.t)}</text>`;
   }
 
   const now = x(S.t);
