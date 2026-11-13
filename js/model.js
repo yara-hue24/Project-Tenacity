@@ -83,7 +83,12 @@ export function marginAt(p, baseChain, t, chain) {
   const dayH = daylightH - homeSlowH - reserveH;
 
   const limiting = o2H <= dayH ? 'oxygen' : 'daylight';
-  return { h: Math.min(o2H, dayH), o2H, dayH, limiting, homeM, homeFastH, homeSlowH, o2LeftKg, daylightH };
+  return {
+    h: Math.min(o2H, dayH), o2H, dayH, limiting, homeM, homeFastH, homeSlowH, o2LeftKg, daylightH,
+    o2KeptKg: o2HomeKg + reserveH * NASA.o2WorkKgH,   // locked for the walk home plus reserve
+    dayKeptH: homeSlowH + reserveH,
+    dayTotalH: daylightH + t,
+  };
 }
 
 // Furthest distance from the refuge that is still recoverable at time t (the walk-back limit).

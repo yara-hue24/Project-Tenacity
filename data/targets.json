@@ -1,11 +1,21 @@
 {
   "goal": "Compare a boxwork hollow with the ridge beside it, then reach the contact where the boxwork meets the layered sulfate unit.",
+  "goal_short": "Compare a boxwork hollow with its ridge, then reach the sulfate contact.",
   "goal_note": "This follows Curiosity's own boxwork campaign on Mount Sharp (2025-2026). The walk stays on ground the rover has already driven.",
   "refuge": "116_1944",
   "plan": [
-    { "id": "119_1722", "dwellMin": 45 },
-    { "id": "120_82", "dwellMin": 45 },
-    { "id": "121_0", "dwellMin": 30 }
+    {
+      "id": "119_1722",
+      "dwellMin": 45
+    },
+    {
+      "id": "120_82",
+      "dwellMin": 45
+    },
+    {
+      "id": "121_0",
+      "dwellMin": 30
+    }
   ],
   "targets": {
     "116_1944": {
