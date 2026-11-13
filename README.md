@@ -47,6 +47,7 @@ Refresh the data snapshots (Python standard library only):
 python3 tools/build_data.py
 python3 tools/build_minerals.py
 python3 tools/build_overlays.py
+(cd tools && python3 build_contours.py)
 ```
 
 ## Layout
@@ -65,6 +66,7 @@ python3 tools/build_overlays.py
 | `tools/build_data.py` | Rebuilds the route, stops, photos, weather and rover positions from NASA's public feeds |
 | `tools/build_minerals.py` | Rebuilds the mineral table from NASA's PDS CheMin archive |
 | `tools/build_overlays.py` | Rebuilds the terrain overlays from NASA Mars Trek and ASU JMARS |
+| `tools/build_contours.py` | Traces the relief lines along the track from the 1 m elevation model |
 | `js/photo.js` | Picks a Navcam frame that shows the ground ahead, not the rover's deck |
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause) |
 | `vendor/fonts/` | Inter and DM Mono, the typefaces NASA's own sites use (SIL Open Font License) |
@@ -79,6 +81,7 @@ python3 tools/build_overlays.py
 | Daily weather and sunset | Atmospheric | Curiosity REMS, NASA/JPL-Caltech/CAB |
 | Surface dose rate | Radiation | Curiosity RAD, Hassler et al. 2014 |
 | Minerals in drilled and scooped samples | Chemical | Curiosity CheMin X-ray diffraction, NASA PDS Geosciences Node |
+| Relief lines every 5 m, within 450 m of the track | Topographic | Traced from the MRO HiRISE 1 m elevation model, NASA Mars Trek |
 | Slope overlay, 6 m | Topographic | MRO HiRISE 1 m elevation model, served by NASA Mars Trek |
 | Loose-ground overlay, 100 m | Thermal | Mars Odyssey THEMIS thermal inertia, ASU JMARS |
 | Oxygen use, walk-back effort | Life support | NASA BVAD Rev 2 (2022) |
@@ -92,6 +95,7 @@ The map zooms out to the whole planet (OpenPlanetaryMap basemap, from NASA/USGS 
 
 ## Known limits
 
+- Relief lines show the shape of the ground, not absolute height: the orbital model sits a few metres off the rover's own elevations (up to about 20 m on Mount Sharp). The drawn lines follow their level in the model to within 0.8 m for 95% of their length.
 - The slope overlay was checked against the tilt Curiosity recorded at its 1,388 stops: the median difference is 1.7°. The loose-ground overlay is a 100 m hint, not a footing map.
 - A mineral result is placed where the rover was parked for the sample's first analysis, which is normally where it was collected. Samples analysed elsewhere are left out.
 - The route stays on Curiosity's track. That is the only ground measured at walking scale; rocks and sand off the track are not modelled.

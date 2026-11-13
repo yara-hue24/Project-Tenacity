@@ -28,9 +28,9 @@ const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const pct = (f) => `${(Math.max(0, Math.min(1, f)) * 100).toFixed(1)}%`;
 
 const S = {
-  site: null, cfg: null, rovers: [], roversAt: null, minerals: null, terrain: null, byId: new Map(), slopes: [],
+  site: null, cfg: null, rovers: [], roversAt: null, minerals: null, terrain: null, contours: null, byId: new Map(), slopes: [],
   p: { ...M.DEFAULTS }, trip: null, plan: null, t: 0, selected: null,
-  show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true, samples: true, slope: false, loose: false },
+  show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true, samples: true, relief: true, slope: false, loose: false },
 };
 // What is open. The default screen shows the answer, the stop list and the map; the rest opens on request.
 const UI = { more: false, walk: true, drawer: null, profile: false, meas: false, clock: false };
@@ -137,7 +137,8 @@ function initMap() {
   // Whole planet at the bottom, so zooming out from a walk ends at Mars itself.
   // zIndex is set on every image layer: they are added at different moments, and without it
   // the coarse layers can end up drawn over the sharp ones.
-  L.tileLayer(GLOBAL_TILES, { zIndex: 1, maxNativeZoom: 7, maxZoom: 20, attribution: 'Global basemap: OpenPlanetaryMap' }).addTo(map);
+  // It stops at zoom 11: closer in it is only blur, and it would shine through the hairline gaps between sharper tiles.
+  L.tileLayer(GLOBAL_TILES, { zIndex: 1, maxNativeZoom: 7, maxZoom: 11, attribution: 'Global basemap: OpenPlanetaryMap' }).addTo(map);
   G.ctx = L.tileLayer(`${TILES}MSL_CTX_ortho_mosaic_6m/{z}/{x}/{y}.png`, {
     tms: true, zIndex: 2, minZoom: 6, maxNativeZoom: 13, maxZoom: 20, attribution: 'CTX: NASA/JPL-Caltech/MSSS',
     bounds: [[-7.8441, 135.9788], [-3.3971, 139.4859]],
@@ -163,10 +164,24 @@ function initMap() {
     L.polyline(all, { pane: 'ground', color: C.bg, weight: 5, opacity: 0.75, interactive: false }),
     L.polyline(all, { pane: 'ground', color: C.ground, weight: 1.75, interactive: false }),
   ]);
-  G.dots = L.layerGroup(S.site.stops.flatMap((s) => [
-    L.circleMarker(ll(s), { pane: 'dots', radius: 3.5, color: C.bg, weight: 1.5, fillColor: '#fff', fillOpacity: 1, interactive: false }),
-    L.circleMarker(ll(s), { pane: 'dots', radius: 13, stroke: false, fillOpacity: 0 }).on('click', () => select(s.id)),
-  ]));
+  // Rover stops are drawn as ticks across the track (see buildStopTicks); these are their click targets.
+  G.hits = S.site.stops.map((s) => L.circleMarker(ll(s), { pane: 'dots', radius: 13, stroke: false, fillOpacity: 0 }).on('click', () => select(s.id)));
+  G.dots = L.layerGroup();
+
+  // Relief lines every 5 m of height, heavier every 25 m, traced from the 1 m elevation model.
+  const { lines, scale, index_every_m: indexEvery } = S.contours;
+  G.relief = L.layerGroup(lines.map(([level, flat]) => {
+    const pts = [];
+    let x = 0;
+    let y = 0;
+    for (let i = 0; i < flat.length; i += 2) {
+      x += flat[i];
+      y += flat[i + 1];
+      pts.push([y / scale, x / scale]);
+    }
+    const index = level % indexEvery === 0;
+    return L.polyline(pts, { pane: 'terrain', color: C.bone, weight: index ? 1.3 : 0.7, opacity: index ? 0.7 : 0.42, interactive: false, smoothFactor: 0.5 });
+  }));
   // Terrain overlays, off until asked for: slope from the 1 m elevation model, loose ground from thermal inertia.
   G.slope = L.imageOverlay(S.terrain.slope.file, S.terrain.bounds, { pane: 'terrain', interactive: false });
   G.loose = looseGroundLayer();
@@ -288,6 +303,32 @@ function fitPlan() {
   });
 }
 
+// A short line across the track at a given distance along it, a fixed number of pixels long at any zoom.
+function crossTick(chain, halfPx) {
+  const route = S.site.route;
+  const a = map.project(ll(M.pointAtChain(route, chain - 4)));
+  const b = map.project(ll(M.pointAtChain(route, chain + 4)));
+  const mid = map.project(ll(M.pointAtChain(route, chain)));
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const nx = (-(b.y - a.y) / len) * halfPx;
+  const ny = ((b.x - a.x) / len) * halfPx;
+  return { line: [map.unproject([mid.x - nx, mid.y - ny]), map.unproject([mid.x + nx, mid.y + ny])], side: map.unproject([mid.x + nx * 1.9, mid.y + ny * 1.9]) };
+}
+
+// Every rover stop as a tick across the track. Rebuilt when the zoom changes so the ticks keep their size.
+let ticksZoom = null;
+function buildStopTicks() {
+  if (ticksZoom === map.getZoom()) return;
+  ticksZoom = map.getZoom();
+  G.dots.clearLayers();
+  for (const [i, s] of S.site.stops.entries()) {
+    const { line } = crossTick(s.chain_m, 5.5);
+    G.dots.addLayer(L.polyline(line, { pane: 'dots', color: C.bg, weight: 4.5, opacity: 0.85, interactive: false }));
+    G.dots.addLayer(L.polyline(line, { pane: 'dots', color: C.bone, weight: 1.75, interactive: false }));
+    G.dots.addLayer(G.hits[i]);
+  }
+}
+
 // Loose ground drawn as stipple, the map convention for sand. It is painted on a canvas at screen
 // resolution, so the dots stay the same small size at every zoom instead of swelling into blocks.
 function looseGroundLayer() {
@@ -385,8 +426,9 @@ function renderMap() {
   const slice = (a, b) => M.sliceRoute(route, a, b).map(ll);
 
   $('#map').classList.toggle('muted-terrain', S.show.muted);
-  for (const k of ['hirise', 'names', 'slope', 'loose', 'ground', 'dots', 'samples']) {
-    const on = S.show[k] && (k !== 'dots' || map.getZoom() >= DOTS_MIN_ZOOM) && (k !== 'samples' || map.getZoom() >= 12);
+  if (S.show.dots && map.getZoom() >= DOTS_MIN_ZOOM) buildStopTicks();
+  for (const k of ['hirise', 'names', 'relief', 'slope', 'loose', 'ground', 'dots', 'samples']) {
+    const on = S.show[k] && (k !== 'dots' || map.getZoom() >= DOTS_MIN_ZOOM) && (k !== 'samples' || map.getZoom() >= 12) && (k !== 'relief' || map.getZoom() >= 13.5);
     if (on && !map.hasLayer(G[k])) map.addLayer(G[k]);
     if (!on && map.hasLayer(G[k])) map.removeLayer(G[k]);
   }
@@ -413,6 +455,20 @@ function renderMap() {
       add(L.marker(ll(M.pointAtChain(route, edge)), {
         icon: flag('caution', `${ICO.caution}WALK-BACK LIMIT ${M.clockAt(S.p, S.t)}`, 30, -30), interactive: false, zIndexOffset: 700,
       }));
+    }
+  }
+
+  // Distance from the refuge, marked along the planned walk like the posts on a trail.
+  if (close) {
+    const far = Math.max(...chains.map((c) => Math.abs(c - base)));
+    const every = far > 3000 ? 1000 : far > 1200 ? 500 : 250;
+    for (const dir of [-1, 1]) {
+      const limit = dir < 0 ? base - Math.min(...chains) : Math.max(...chains) - base;
+      for (let d = every; d <= limit; d += every) {
+        const { line, side } = crossTick(base + dir * d, 8);
+        add(cased(line, C.bone, 2));
+        add(L.marker(side, { icon: L.divIcon({ className: 'post', iconSize: [0, 0], html: `<span>${d >= 1000 ? `${d / 1000} km` : `${d} m`}</span>` }), interactive: false, zIndexOffset: 150 }));
+      }
     }
   }
 
@@ -636,6 +692,7 @@ function layersHTML() {
 
     <h2>Terrain from orbit</h2>
     <div class="layer-list">
+      ${check('relief', `Relief lines, every ${S.contours.interval_m} m of height`)}
       ${check('slope', 'Slope, from the 1 m elevation model')}
       ${check('loose', 'Loose ground, from thermal inertia')}
     </div>
@@ -653,6 +710,8 @@ function layersHTML() {
       ${line(C.route)}<span>Planned route</span>
       ${line(C.walked)}<span>Ground already walked</span>
       ${line(C.ground)}<span>Ground Curiosity has driven</span>
+      <svg width="36" height="18"><line x1="2" y1="9" x2="34" y2="9" stroke="${C.ground}" stroke-width="1.75"/><line x1="18" y1="3" x2="18" y2="15" stroke="${C.bg}" stroke-width="4.5"/><line x1="18" y1="3" x2="18" y2="15" stroke="${C.bone}" stroke-width="1.75"/></svg><span>Rover stop: select for its photo</span>
+      <svg width="36" height="18"><path d="M1 6c8-5 14 6 22 2s8-4 12-3M1 13c8-4 15 5 23 1s8-3 11-2" fill="none" stroke="${C.bone}" stroke-width="0.9" opacity="0.7"/></svg><span>Relief lines: closer together means steeper</span>
       ${line(C.caution, 'stroke-dasharray="1 8" stroke-linecap="round"')}<span>Beyond the walk-back limit right now</span>
       <svg width="36" height="24"><circle cx="18" cy="12" r="7.5" fill="none" stroke="${C.bone}" stroke-width="2.25"/><circle cx="18" cy="12" r="2" fill="${C.bone}"/></svg><span>Sample site: minerals measured by Curiosity</span>
       <svg width="36" height="24"><rect x="12" y="6" width="12" height="12" rx="1.5" transform="rotate(45 18 12)" fill="${C.bone}"/></svg><span>Where a rover is now</span>
@@ -697,6 +756,7 @@ const SOURCES = [
   ['Slow factor', '1.5×', 'assumed', 'ASSUMED', 'Our choice. Analog crews found planned walk times too optimistic.', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6442304'],
   ['Stop names and science notes', 'Curiosity mission blog', 'measured', 'MEASURED', 'NASA Science', 'https://science.nasa.gov/mission/msl-curiosity/'],
   ['Minerals at sample sites', '48 drilled and scooped samples', 'measured', 'MEASURED', 'Curiosity CheMin X-ray diffraction, NASA PDS Geosciences Node', 'https://pds-geosciences.wustl.edu/missions/msl/chemin.htm'],
+  ['Relief lines', 'Every 5 m, within 450 m of the track', 'derived', 'DERIVED', 'Traced from the MRO HiRISE 1 m elevation model on NASA Mars Trek. Lines show shape, not absolute height.', 'https://trek.nasa.gov/mars/'],
   ['Slope overlay', '1 m elevation model, 6 m slope', 'measured', 'MEASURED', 'MRO HiRISE stereo model served by NASA Mars Trek (Gale_DEM_SMG_1m)', 'https://trek.nasa.gov/mars/'],
   ['Loose-ground overlay', 'Thermal inertia, 100 m', 'derived', 'DERIVED', 'Mars Odyssey THEMIS thermal inertia mosaic, ASU JMARS', 'https://jmars.asu.edu/'],
   ['Where the rovers are now', 'End of each rover\'s last drive', 'measured', 'MEASURED', 'NASA/JPL-Caltech rover position feeds, read when the page loads', 'https://science.nasa.gov/mission/mars-2020-perseverance/location-map/'],
@@ -1272,6 +1332,7 @@ function wire() {
 async function main() {
   const [site, cfg, rovers, minerals, terrain] = await Promise.all(
     ['data/site.json', 'data/targets.json', 'data/rovers.json', 'data/minerals.json', 'data/overlays/overlays.json'].map((u) => fetch(u).then((r) => r.json())));
+  S.contours = await fetch('data/overlays/contours.json').then((r) => r.json());
   S.minerals = minerals;
   S.terrain = terrain;
   S.site = site;
