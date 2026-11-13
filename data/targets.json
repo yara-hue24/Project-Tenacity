@@ -1,0 +1,36 @@
+{
+  "goal": "Compare a boxwork hollow with the ridge beside it, then reach the contact where the boxwork meets the layered sulfate unit.",
+  "goal_note": "This follows Curiosity's own boxwork campaign on Mount Sharp (2025-2026). The walk stays on ground the rover has already driven.",
+  "refuge": "116_1944",
+  "plan": [
+    { "id": "119_1722", "dwellMin": 45 },
+    { "id": "120_82", "dwellMin": 45 },
+    { "id": "121_0", "dwellMin": 30 }
+  ],
+  "targets": {
+    "116_1944": {
+      "name": "Altadena",
+      "kind": "Drill site at the edge of the boxwork",
+      "note": "Curiosity prepared to drill here on sols 4561-4562 before driving deeper into what the team called a \"potentially boxwork-bearing region\".",
+      "source": "https://science.nasa.gov/blog/sols-4561-4562-prepping-to-drill-at-altadena"
+    },
+    "119_1722": {
+      "name": "Monte Grande hollow",
+      "kind": "Hollow · drill target Valle de la Luna",
+      "note": "\"The boxwork structures are a series of ridges and hollows.\" Curiosity drilled the Valle de la Luna block inside this hollow (plan for sols 4689-4694).",
+      "source": "https://science.nasa.gov/blog/curiosity-blog-sols-4689-4694-drill-in-the-boxwork-unit-is-go/"
+    },
+    "120_82": {
+      "name": "Nevado Sajama ridge",
+      "kind": "Ridge top · drill target Nevado Sajama",
+      "note": "Drilled on sol 4718 to compare with the hollow below: \"We hope their comparison will provide us with new insights into how the boxwork unit came to be.\"",
+      "source": "https://science.nasa.gov/solar-system/curiosity-blog-sols-4716-4722-drilling-success-at-nevado-sajama"
+    },
+    "121_0": {
+      "name": "Southern contact",
+      "kind": "Boxwork meets the layered sulfate unit",
+      "note": "Curiosity imaged this contact on sols 4832-4837: \"These will be key to helping us understand the origin and evolution of the boxwork unit.\"",
+      "source": "https://science.nasa.gov/blog/curiosity-blog-sols-4832-4837-driving-the-contact-line/"
+    }
+  }
+}

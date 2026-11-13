@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tenacity · Marswalk margin map</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="strip">
+    <div class="brand">
+      <strong>TENACITY</strong>
+      <span>Marswalk margin map · Boxwork ridges, Gale Crater</span>
+    </div>
+    <p id="verdict" role="status" aria-live="polite"></p>
+    <div class="nums">
+      <div class="num" id="num-turn"><span class="k">Turn back in</span><span class="v"></span><span class="s"></span></div>
+      <div class="num" id="num-home"><span class="k">Walk home</span><span class="v"></span><span class="s"></span></div>
+      <div class="num" id="num-limit"><span class="k">Limiting supply</span><span class="v"></span><span class="s"></span></div>
+    </div>
+  </header>
+
+  <main>
+    <aside id="panel">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="walk" aria-selected="true">Walk</button>
+        <button role="tab" data-tab="layers" aria-selected="false">Layers</button>
+        <button role="tab" data-tab="sources" aria-selected="false">Sources</button>
+      </nav>
+      <section id="tab-walk" class="tab"></section>
+      <section id="tab-layers" class="tab" hidden></section>
+      <section id="tab-sources" class="tab" hidden></section>
+    </aside>
+
+    <div id="map" aria-label="Map of the walk"></div>
+    <section id="stopcard" hidden></section>
+  </main>
+
+  <footer id="timeline">
+    <div class="tl-controls">
+      <button id="leg-prev" aria-label="Previous step">◀ Step</button>
+      <button id="leg-next" aria-label="Next step">Step ▶</button>
+      <div id="tl-label"></div>
+    </div>
+    <input id="scrub" type="range" min="0" max="100" step="1" value="0" aria-label="Time in the plan">
+    <div id="profile"></div>
+  </footer>
+
+  <div id="cuff-sheet" hidden>
+    <div class="cuff-actions">
+      <button id="cuff-print">Print</button>
+      <button id="cuff-close">Close</button>
+    </div>
+    <article id="cuff"></article>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
