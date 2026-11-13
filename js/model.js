@@ -26,6 +26,21 @@ export const DEFAULTS = {
   sunsetClock: '18:51',
 };
 
+// Local mean solar time on Mars at an east longitude, in hours 0-24, for an Earth instant.
+// Mars24 algorithm (Allison & McEwen 2000, NASA GISS): Mars Sol Date from Terrestrial Time.
+const TT_MINUS_UTC_S = 69.184;   // 37 leap seconds + 32.184 s; unchanged since 2017
+export function marsLocalHours(epochMs, lonEastDeg) {
+  const jdTT = epochMs / 86400000 + 2440587.5 + TT_MINUS_UTC_S / 86400;
+  const msd = (jdTT - 2451545.0 - 4.5) / 1.0274912517 + 44796.0 - 0.0009626;
+  const mtc = ((msd % 1) + 1) % 1 * 24;           // mean solar time at Mars' prime meridian
+  return (mtc + lonEastDeg / 15 + 24) % 24;
+}
+
+export function hoursToClock(hours) {
+  const mins = Math.floor(((hours % 24) + 24) % 24 * 60);
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+}
+
 export function clockToHours(clock) {
   const [h, m] = clock.split(':').map(Number);
   return h + m / 60;
@@ -142,11 +157,26 @@ export function pointAtChain(route, chain) {
   return { lon: a[0] + (b[0] - a[0]) * f, lat: a[1] + (b[1] - a[1]) * f, elev: a[2] + (b[2] - a[2]) * f, chain: c };
 }
 
+// Index of the last route point at or before `chain`.
+export function indexAtChain(route, chain) {
+  let lo = 0;
+  let hi = route.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (route[mid][3] <= chain) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
+}
+
 export function sliceRoute(route, c0, c1) {
   const lo = Math.min(c0, c1);
   const hi = Math.max(c0, c1);
   const pts = [pointAtChain(route, lo)];
-  for (const r of route) if (r[3] > lo && r[3] < hi) pts.push({ lon: r[0], lat: r[1], elev: r[2], chain: r[3] });
+  for (let i = indexAtChain(route, lo); i < route.length && route[i][3] < hi; i++) {
+    const r = route[i];
+    if (r[3] > lo) pts.push({ lon: r[0], lat: r[1], elev: r[2], chain: r[3] });
+  }
   pts.push(pointAtChain(route, hi));
   return pts;
 }
@@ -184,11 +214,12 @@ export function legStats(route, slopes, c0, c1) {
     if (d > 0) up += d; else down -= d;
     ref = e;
   };
-  route.forEach((r, i) => {
-    if (r[3] <= lo || r[3] >= hi) return;
+  for (let i = indexAtChain(route, lo); i < route.length && route[i][3] < hi; i++) {
+    const r = route[i];
+    if (r[3] <= lo) continue;
     step(r[2], false);
     if (slopes[i] > maxSlope) maxSlope = slopes[i];
-  });
+  }
   step(pointAtChain(route, hi).elev, true);
   const fwd = c1 >= c0;
   return { distM: hi - lo, climbM: fwd ? up : down, dropM: fwd ? down : up, maxSlopeDeg: maxSlope };

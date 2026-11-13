@@ -42,8 +42,6 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
   background: var(--bg);
   color: var(--text);
   font: 15px/1.45 var(--sans);
@@ -83,16 +81,39 @@ svg.ico, .icon-btn svg, .chev { width: 16px; height: 16px; flex: none; }
 .icon-btn svg, .ico-line, .chev { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- stage: map with a thin layer of floating cards ---------- */
-#stage { position: relative; min-height: 0; }
+/* --tl-h is the height of the floating timeline, kept up to date from script. */
+#stage { position: relative; height: 100%; --tl-h: 76px; }
+#stage::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 130px; z-index: 900; pointer-events: none;
+  background: linear-gradient(rgba(10, 9, 8, 0.7), rgba(10, 9, 8, 0));
+}
 #map { position: absolute; inset: 0; background: #0a0908; }
 #hud {
-  position: absolute; inset: 12px; z-index: 1000; pointer-events: none;
+  position: absolute; inset: 12px 12px calc(var(--tl-h) + 4px) 12px; z-index: 1000; pointer-events: none;
   display: grid;
   grid-template-columns: 296px minmax(0, 1fr) 344px;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
 }
-#hud > * { pointer-events: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--float); }
+#hud > *, #right > * { pointer-events: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--float); }
+/* Right column: the Mars/Earth clock on top, then whichever card is open. */
+#hud > #right { grid-column: 3; grid-row: 2; min-height: 0; display: flex; flex-direction: column; gap: 12px; pointer-events: none; background: none; border: 0; box-shadow: none; }
+
+/* ---------- Mars time beside Earth time ---------- */
+#clock { align-self: flex-end; flex: none; max-width: 100%; overflow: hidden; }
+#clock-main { display: flex; align-items: stretch; width: 100%; min-height: 48px; padding: 0; border: 0; border-radius: 0; text-align: left; }
+#clock .side { display: grid; align-content: center; gap: 1px; padding: 6px 14px; }
+#clock .side + .side { border-left: 1px solid var(--hair); }
+#clock .k { font-size: 9.5px; color: var(--muted); }
+#clock .side b { font: 500 19px/1.1 var(--mono); font-stretch: 80%; font-variant-numeric: tabular-nums; }
+#clock-main .chev { align-self: center; margin: 0 10px 0 -2px; }
+#clock-main[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.cmp { width: 100%; border-collapse: collapse; border-top: 1px solid var(--hair); font-size: 13px; }
+.cmp th, .cmp td { padding: 7px 14px; text-align: left; border-bottom: 1px solid var(--hair); font-weight: 400; }
+.cmp th { color: var(--muted); }
+.cmp td { font: 500 12.5px var(--mono); font-stretch: 80%; white-space: nowrap; }
+.cmp thead th { font: 500 9.5px var(--mono); font-stretch: 87.5%; letter-spacing: 0.1em; text-transform: uppercase; }
+#clock .small { margin: 0; padding: 9px 14px 11px; width: 0; min-width: 100%; }
 
 /* ---------- the answer ---------- */
 #answer { grid-column: 1 / -1; overflow: hidden; }
@@ -152,7 +173,14 @@ svg.ico, .icon-btn svg, .chev { width: 16px; height: 16px; flex: none; }
 .pill .chev { transform: rotate(-90deg); }
 .card-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 0 14px; }
 .card-head .k { font-size: 11px; color: var(--muted); }
-#walk .goal { margin: 0; padding: 0 14px 10px; font-size: 14px; color: var(--muted); text-wrap: pretty; }
+.trip { display: grid; gap: 1px; min-width: 0; padding-top: 6px; }
+.trip select {
+  appearance: none; min-height: 32px; max-width: 100%; padding: 0 22px 0 0; margin: 0;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 6 5 5 5-5' fill='none' stroke='%23ab9e8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right center / 14px;
+  border: 0; color: var(--text); font: 600 17px var(--sans); cursor: pointer; text-overflow: ellipsis;
+}
+.trip select option { background: var(--panel); color: var(--text); }
+#walk .goal { margin: 0; padding: 4px 14px 10px; font-size: 14px; color: var(--muted); text-wrap: pretty; }
 
 .rows { list-style: none; margin: 0; padding: 0 0 4px; position: relative; }
 .rows::before { content: ""; position: absolute; left: 27px; top: 22px; bottom: 26px; width: 2px; background: var(--route); }
@@ -178,7 +206,7 @@ button.row:hover { background: var(--raise); }
 #walk .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 14px 14px; }
 
 /* ---------- stop card and drawer share the right column ---------- */
-#stopcard, #drawer { grid-column: 3; grid-row: 2; align-self: start; max-height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+#stopcard, #drawer { flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 #stopcard { position: relative; border-top: 3px solid var(--select); }
 #stopcard.enter, #drawer.enter { animation: card-in 160ms ease-out; }
 @keyframes card-in { from { opacity: 0; transform: translateY(-6px); } }
@@ -190,10 +218,20 @@ button.row:hover { background: var(--raise); }
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
   display: flex; justify-content: space-between; gap: 10px;
 }
+#stopcard .nophoto { aspect-ratio: 16 / 10; display: grid; place-items: center; padding: 0 24px; text-align: center; background: #000; color: var(--muted); font-size: 13px; }
 #stopcard .close { position: absolute; top: 8px; right: 8px; z-index: 2; background: rgba(15, 13, 11, 0.8); border-color: transparent; }
 #stopcard .close:hover { background: var(--bg); border-color: var(--muted); }
 #stopcard .body { padding: 14px 16px 16px; }
-#stopcard .kicker { font-size: 13px; color: var(--muted); padding-right: 40px; }
+#stopcard .kicker { font-size: 13px; color: var(--muted); }
+.type { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 500 10.5px var(--mono); font-stretch: 87.5%; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.type i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.type i.sq { border-radius: 2px; }
+/* Neighbours along the track, for moving from stop to stop. */
+.near { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hair); }
+.near button { min-height: 44px; padding: 4px 10px; display: grid; gap: 0; text-align: left; line-height: 1.25; }
+.near button:last-child { text-align: right; }
+.near .k { font-size: 9.5px; color: var(--muted); }
+.near span:last-child { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #stopcard h3 { margin: 2px 0 0; font-size: 21px; line-height: 1.2; font-weight: 600; }
 #stopcard .note { margin: 10px 0 0; font-size: 14px; }
 
@@ -281,14 +319,23 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 .leaflet-container { font: inherit; background: #0a0908; }
 .muted-terrain .leaflet-tile-pane { filter: grayscale(0.8) sepia(0.12) brightness(0.74) contrast(1.15); }
 #cursor-pos {
-  position: absolute; left: 12px; bottom: 40px; z-index: 600; pointer-events: none;
+  position: absolute; left: 12px; bottom: calc(var(--tl-h) + 54px); z-index: 600; pointer-events: none;
   font: 500 11px var(--mono); font-stretch: 80%; color: var(--text);
   background: rgba(15, 13, 11, 0.82); padding: 4px 8px; border-radius: 2px;
 }
 #cursor-pos:empty { display: none; }
+/* Event credit, as plain text. No NASA or Space Apps logo is used. */
+#event-mark {
+  position: absolute; left: 12px; bottom: calc(var(--tl-h) + 30px); z-index: 590; pointer-events: none;
+  font: 600 11px var(--mono); font-stretch: 87.5%; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text); opacity: 0.62; text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+}
+.leaflet-bottom { bottom: var(--tl-h); }
 .leaflet-bar { border: 1px solid var(--line) !important; border-radius: 3px; box-shadow: none !important; overflow: hidden; }
 .leaflet-bar a { width: 44px !important; height: 44px !important; line-height: 44px !important; background: var(--panel); color: var(--text); border-bottom-color: var(--line) !important; font: 400 20px var(--mono); }
 .leaflet-bar a:hover { background: var(--raise); color: var(--text); }
+.tools a { display: grid !important; place-items: center; cursor: pointer; }
+.tools svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .leaflet-control-scale-line { background: rgba(15, 13, 11, 0.82); color: var(--text); border: 0; border-bottom: 2px solid var(--text); font: 500 11px var(--mono); font-stretch: 80%; padding: 3px 6px 2px; text-shadow: none; }
 .leaflet-control-attribution { background: rgba(15, 13, 11, 0.78) !important; color: var(--muted); font-size: 11px; padding: 2px 8px !important; }
 .leaflet-control-attribution a { color: var(--muted); }
@@ -316,10 +363,15 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 .leader.warning line { stroke: var(--warning); }
 
 /* ---------- timeline: one slim row, ground profile on request ---------- */
+/* It floats on a dark fade over the map, so the map runs edge to edge. */
 #timeline {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000;
   display: grid; grid-template-columns: auto 300px minmax(0, 1fr) auto; align-items: center; gap: 4px 12px;
-  background: var(--panel); border-top: 1px solid var(--line); padding: 8px 12px;
+  padding: 26px 12px 10px;
+  background: linear-gradient(rgba(10, 9, 8, 0), rgba(10, 9, 8, 0.9) 24px, rgba(10, 9, 8, 0.96));
 }
+#timeline button { background: rgba(23, 20, 17, 0.9); }
+#timeline button:hover { background: var(--raise); }
 .tl-steps { display: flex; gap: 6px; }
 #tl-label { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 #tl-label b { font: 600 20px var(--mono); font-stretch: 80%; }
@@ -332,7 +384,7 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 #band .num-t, #profile .num-t { fill: var(--bg); font-weight: 700; font-size: 11px; }
 #profile-toggle { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 #profile-toggle[aria-expanded="true"] { color: var(--text); border-color: var(--text); }
-#profile-row { grid-column: 1 / -1; padding-top: 6px; border-top: 1px solid var(--hair); }
+#profile-row { grid-column: 1 / -1; padding-top: 6px; border-top: 1px solid var(--line); }
 .cap { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
 
 /* ---------- cuff card ---------- */
@@ -355,8 +407,9 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 
 @media print {
   @page { size: A6; margin: 0; }
-  body { display: block; background: #fff; }
-  #stage, #timeline, .cuff-actions { display: none !important; }
+  body { background: #fff; }
+  html, body { height: auto; }
+  #stage, .cuff-actions { display: none !important; }
   #cuff-sheet { position: static; display: block !important; background: none; padding: 0; overflow: visible; }
   #cuff { margin: 0; }
 }
@@ -365,7 +418,8 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 @media (max-width: 900px) {
   #hud { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); inset: 8px; gap: 8px; }
   #walk { grid-column: 1; grid-row: 2; max-height: 44vh; }
-  #stopcard, #drawer { grid-column: 1; grid-row: 3; align-self: end; }
+  #hud > #right { grid-column: 1; grid-row: 3; justify-content: flex-end; }
+  #clock { display: none; }
   .brand small, .brand strong { display: none; }
   .brand { padding-right: 12px; }
   #answer-main { gap: 12px; }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   NASA, WALKBACK_FACTOR, DEFAULTS, MARS_HOUR,
   buildTimeline, positionAt, marginAt, reachAt, leaveByAt, analyse,
-  pointAtChain, routeSlopes, legStats, bearingDeg, clockAt, doseMsv,
+  pointAtChain, routeSlopes, legStats, bearingDeg, clockAt, doseMsv, marsLocalHours, hoursToClock, indexAtChain, sliceRoute,
 } from '../js/model.js';
 
 const p = { ...DEFAULTS };
@@ -88,4 +88,27 @@ test('clock and dose', () => {
   assert.equal(clockAt(p, 0), '09:00');
   assert.equal(clockAt(p, MARS_HOUR), '10:00');
   near(doseMsv(8), 0.67 / 3);
+});
+
+test('Mars local time: Curiosity landed mid-afternoon at Gale', () => {
+  // Touchdown 2012-08-06 05:17:57 UTC at 137.44 E. NASA gives the landing as about 15:00 local mean solar time.
+  const h = marsLocalHours(Date.UTC(2012, 7, 6, 5, 17, 57), 137.4417);
+  assert.ok(h > 14.7 && h < 15.3, `got ${hoursToClock(h)}`);
+  assert.equal(hoursToClock(9.5), '09:30');
+  assert.equal(hoursToClock(-0.5), '23:30');
+});
+
+test('a sol later the Mars clock reads the same', () => {
+  const t0 = Date.UTC(2026, 10, 13, 12, 0, 0);
+  const a = marsLocalHours(t0, 137.4);
+  const b = marsLocalHours(t0 + NASA.solHours * 3600000, 137.4);
+  assert.ok(Math.abs(a - b) < 0.001 || Math.abs(a - b) > 23.999);
+});
+
+test('route slicing uses the index lookup', () => {
+  const route = [[0, 0, 0, 0], [0, 0, 1, 10], [0, 0, 2, 20], [0, 0, 3, 30]];
+  assert.equal(indexAtChain(route, 0), 0);
+  assert.equal(indexAtChain(route, 19.9), 1);
+  assert.equal(indexAtChain(route, 99), 3);
+  assert.deepEqual(sliceRoute(route, 5, 25).map((q) => q.chain), [5, 10, 20, 25]);
 });

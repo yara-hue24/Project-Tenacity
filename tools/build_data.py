@@ -28,12 +28,13 @@ TRAVERSE_URL = "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_traverse.js
 WEATHER_URL = "https://mars.nasa.gov/rss/api/?feed=weather&category=msl&feedtype=json"
 IMAGES_URL = "https://mars.nasa.gov/rss/api/?feed=raw_images&category=msl&feedtype=json&sol={sol}&num=500"
 
-# Curiosity's boxwork campaign on Mount Sharp, Gale Crater.
-SOL_FIRST = 4553  # "Back to the boxwork" (NASA Curiosity blog, sol 4553)
-SOL_LAST = 4880   # Atacama drill site, first layered-sulfate bedrock past the boxwork
+# The whole track is walkable ground. Photos are bundled only for the boxwork campaign
+# on Mount Sharp; every other stop loads its photo from NASA when it is opened.
+PHOTO_SOL_FIRST = 4553  # "Back to the boxwork" (NASA Curiosity blog, sol 4553)
+PHOTO_SOL_LAST = 4880   # Atacama drill site, first layered-sulfate bedrock past the boxwork
 
 MARS_RADIUS_M = 3396190.0
-MIN_SPACING_M = 0.5  # the feed repeats points a few centimetres apart
+MIN_SPACING_M = 1.5  # keep one route point per this many metres; the feed is far denser
 UA = "tenacity-data-snapshot/1.0"
 
 
@@ -56,8 +57,13 @@ def ground_m(a, b):
     return math.hypot(dx, dy)
 
 
-def build_route(waypoints, traverse):
-    """Join the per-drive traverse lines between the first and last waypoint."""
+def build_route(traverse):
+    """Join every drive into one line.
+
+    Distance along the track ("chain") is added up over every point NASA publishes,
+    then the line is thinned, so the stored distances stay true to the full track.
+    Returns the route and the chain at the end of each drive, keyed by position.
+    """
     def key(c):
         return (round(c[0], 6), round(c[1], 6))
 
@@ -67,26 +73,26 @@ def build_route(waypoints, traverse):
             return [c for line in g["coordinates"] for c in line]
         return g["coordinates"]
 
-    drives = [coords(f) for f in traverse["features"]]
-    ends = {key(d[-1]): i for i, d in enumerate(drives) if d}
+    route, ends = [], {}
+    chain, prev, kept = 0.0, None, None
 
-    first = ends.get(key(waypoints[0]["geometry"]["coordinates"]))
-    last = ends.get(key(waypoints[-1]["geometry"]["coordinates"]))
-    if first is None or last is None:
-        sys.exit("could not match waypoints to traverse segments")
-
-    pts = [waypoints[0]["geometry"]["coordinates"]]
-    for d in drives[first + 1:last + 1]:
-        for c in d:
-            if ground_m(pts[-1], c) > MIN_SPACING_M:
-                pts.append(c)
-
-    route, chain = [], 0.0
-    for i, c in enumerate(pts):
-        if i:
-            chain += math.hypot(ground_m(pts[i - 1], c), c[2] - pts[i - 1][2])
+    def keep(c):
         route.append([round(c[0], 7), round(c[1], 7), round(c[2], 2), round(chain, 2)])
-    return route
+
+    for f in traverse["features"]:
+        drive = coords(f)
+        for i, c in enumerate(drive):
+            if prev is not None:
+                chain += math.hypot(ground_m(prev, c), c[2] - prev[2])
+            prev = c
+            last_of_drive = i == len(drive) - 1
+            if kept is None or last_of_drive or ground_m(kept, c) >= MIN_SPACING_M:
+                if kept is None or ground_m(kept, c) > 0.05:
+                    keep(c)
+                    kept = c
+            if last_of_drive:
+                ends[key(c)] = chain
+    return route, ends, key
 
 
 def nearest_chain(route, lon, lat):
@@ -113,14 +119,16 @@ def main():
     traverse = fetch(TRAVERSE_URL, "traverse.json")
     weather = fetch(WEATHER_URL, "weather.json")
 
-    wps = [f for f in wp_all if SOL_FIRST <= f["properties"]["sol"] <= SOL_LAST]
-    route = build_route(wps, traverse)
+    wps = wp_all
+    route, ends, key = build_route(traverse)
+    ends.setdefault(key(route[0]), 0.0)
 
     PHOTOS.mkdir(parents=True, exist_ok=True)
     stops = []
     for i, f in enumerate(wps):
         p = f["properties"]
-        chain, off = nearest_chain(route, p["lon"], p["lat"])
+        k = key((p["lon"], p["lat"]))
+        chain, off = (ends[k], 0.0) if k in ends else nearest_chain(route, p["lon"], p["lat"])
         next_sol = wps[i + 1]["properties"]["sol"] if i + 1 < len(wps) else p["sol"] + 4
         stop = {
             "id": p["RMC"],
@@ -129,11 +137,12 @@ def main():
             "lat": round(p["lat"], 7),
             "elev_m": round(p["elev_geoid"], 1),
             "tilt_deg": p["tilt"],
-            "chain_m": chain,
+            "chain_m": round(chain, 2),
         }
         if off > 2:
             print(f"warn: waypoint sol {p['sol']} is {off:.1f} m off the route", file=sys.stderr)
-        im = pick_photo(p["sol"], max(next_sol, p["sol"] + 1), p["site"], p["drive"])
+        bundled = PHOTO_SOL_FIRST <= p["sol"] <= PHOTO_SOL_LAST
+        im = pick_photo(p["sol"], max(next_sol, p["sol"] + 1), p["site"], p["drive"]) if bundled else None
         if im:
             name = f"{p['RMC']}.jpg"
             (PHOTOS / name).write_bytes(fetch(im["image_files"]["medium"], f"photo_{name}", binary=True))
@@ -149,9 +158,10 @@ def main():
     latest = next(s for s in weather["soles"] if s["max_temp"] not in ("--", "", None))
     site = {
         "meta": {
-            "name": "Boxwork ridges, Mount Sharp, Gale Crater",
+            "name": "Curiosity's track, Gale Crater",
             "snapshot_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-            "sol_range": [SOL_FIRST, SOL_LAST],
+            "sol_range": [wps[0]["properties"]["sol"], wps[-1]["properties"]["sol"]],
+            "bundled_photo_sols": [PHOTO_SOL_FIRST, PHOTO_SOL_LAST],
             "mars_radius_m": MARS_RADIUS_M,
             "elevation_datum": "Mars geoid (rover localisation)",
         },

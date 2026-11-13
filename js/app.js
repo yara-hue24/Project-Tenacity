@@ -1,7 +1,10 @@
 import * as M from './model.js';
 
 const TILES = 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/';
-const STORE = 'tenacity.v1';
+const STORE = 'tenacity.v2';
+const PHOTO_FEED = 'https://mars.nasa.gov/rss/api/?feed=raw_images&category=msl&feedtype=json&num=500&sol=';
+const DOTS_MIN_ZOOM = 14.5;      // below this the 1,388 rover stops are too dense to read
+const BEYOND_SHOWN_M = 800;      // how far past the walk-back limit the warning dashes run
 const LOW_MARGIN_H = 0.5;
 const BAND_PAD = 12;
 
@@ -23,11 +26,11 @@ const pct = (f) => `${(Math.max(0, Math.min(1, f)) * 100).toFixed(1)}%`;
 
 const S = {
   site: null, cfg: null, byId: new Map(), slopes: [],
-  p: { ...M.DEFAULTS }, plan: null, t: 0, selected: null,
+  p: { ...M.DEFAULTS }, trip: null, plan: null, t: 0, selected: null,
   show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true },
 };
 // What is open. The default screen shows the answer, the stop list and the map; the rest opens on request.
-const UI = { more: false, walk: true, drawer: null, profile: false, meas: false };
+const UI = { more: false, walk: true, drawer: null, profile: false, meas: false, clock: false };
 let D = null;      // derived from plan + params on every full render
 let map = null;
 let shownCard = null;
@@ -37,22 +40,30 @@ const G = {};      // map layers
 // ---------- state ----------
 
 function save() {
-  try { localStorage.setItem(STORE, JSON.stringify({ plan: S.plan, p: S.p })); } catch { /* storage may be blocked */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ trip: S.trip, plan: S.plan, p: S.p })); } catch { /* storage may be blocked */ }
 }
 
 function loadSaved() {
   try {
     const raw = JSON.parse(localStorage.getItem(STORE) || 'null');
-    if (!raw || !S.byId.has(raw.plan.refuge) || !raw.plan.stops.every((s) => S.byId.has(s.id))) return false;
+    if (!raw || !S.cfg.trips.some((t) => t.id === raw.trip)) return false;
+    if (!S.byId.has(raw.plan.refuge) || !raw.plan.stops.every((s) => S.byId.has(s.id))) return false;
+    S.trip = raw.trip;
     S.plan = raw.plan;
     S.p = { ...S.p, ...raw.p };
     return true;
   } catch { return false; }
 }
 
-function defaultPlan() {
-  S.plan = { refuge: S.cfg.refuge, stops: S.cfg.plan.map((s) => ({ ...s })) };
-  S.p = { ...M.DEFAULTS, sunsetClock: S.site.weather.sunset };
+const trip = () => S.cfg.trips.find((t) => t.id === S.trip);
+
+// Load one of the ready-made trips. Assumptions are left alone unless asked.
+function loadTrip(id, resetAssumptions = false) {
+  S.trip = id;
+  S.plan = { refuge: trip().refuge, stops: trip().plan.map((s) => ({ ...s })) };
+  S.t = 0;
+  S.selected = null;
+  if (resetAssumptions) S.p = { ...M.DEFAULTS, sunsetClock: S.site.weather.sunset };
 }
 
 function derive() {
@@ -74,10 +85,33 @@ const planIndex = (id) => S.plan.stops.findIndex((s) => s.id === id);
 
 function initMap() {
   const crs = L.extend({}, L.CRS.EPSG3857, { R: S.site.meta.mars_radius_m });
-  map = L.map('map', { crs, zoomControl: false, minZoom: 11, maxZoom: 20, zoomSnap: 0.5 });
+  map = L.map('map', { crs, zoomControl: false, minZoom: 10, maxZoom: 20, zoomSnap: 0.5, preferCanvas: true });
   map.attributionControl.setPrefix(false);
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 140 }).addTo(map);
+
+  // Two shortcuts stacked above the zoom buttons: frame the walk, open the layers.
+  const Tools = L.Control.extend({
+    options: { position: 'bottomright' },
+    onAdd() {
+      const el = L.DomUtil.create('div', 'leaflet-bar tools');
+      el.innerHTML = `
+        <a role="button" tabindex="0" data-tool="fit" title="Show the whole walk" aria-label="Show the whole walk"><svg viewBox="0 0 18 18"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4"/><circle cx="9" cy="9" r="1.6"/></svg></a>
+        <a role="button" tabindex="0" data-tool="layers" title="Map layers and legend" aria-label="Map layers and legend"><svg viewBox="0 0 18 18"><path d="m9 2 7 4-7 4-7-4zM2 9.5l7 4 7-4M2 13l7 4 7-4"/></svg></a>`;
+      L.DomEvent.disableClickPropagation(el);
+      const run = (e) => {
+        const tool = e.target.closest('[data-tool]');
+        if (!tool || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+        if (tool.dataset.tool === 'fit') fitPlan();
+        else openDrawer(UI.drawer === 'layers' ? null : 'layers');
+      };
+      el.addEventListener('click', run);
+      el.addEventListener('keydown', run);
+      return el;
+    },
+  });
+  map.addControl(new Tools());
   map.createPane('names').style.zIndex = 350;
   map.getPane('names').style.pointerEvents = 'none';
   [['ground', 410], ['route', 420], ['dots', 430]].forEach(([name, z]) => { map.createPane(name).style.zIndex = z; });
@@ -111,11 +145,18 @@ function initMap() {
   });
   map.on('mouseout', () => { $('#cursor-pos').textContent = ''; });
 
-  const b = L.latLngBounds(all);
-  // Leave room for the cards that float over the map.
+  map.on('zoomend', () => { if (D) renderMap(); });
+  map.setMaxBounds(L.latLngBounds(all).pad(0.6));
+}
+
+// Frame the planned walk, leaving room for the cards that float over the map.
+function fitPlan() {
+  const chains = [D.base.chain_m, ...D.stops.map((s) => s.chain)];
+  const pts = M.sliceRoute(S.site.route, Math.min(...chains), Math.max(...chains)).map(ll);
   const wide = window.innerWidth > 900;
-  map.fitBounds(b, { paddingTopLeft: wide ? [330, 100] : [30, 150], paddingBottomRight: wide ? [60, 30] : [30, 30] });
-  map.setMaxBounds(b.pad(3));
+  map.fitBounds(L.latLngBounds(pts), {
+    paddingTopLeft: wide ? [340, 110] : [30, 150], paddingBottomRight: [wide ? 80 : 30, $('#timeline').offsetHeight + 40], maxZoom: 18, animate: false,
+  });
 }
 
 const icon = (cls, text, size = 26) => L.divIcon({
@@ -161,8 +202,9 @@ function renderMap() {
 
   $('#map').classList.toggle('muted-terrain', S.show.muted);
   for (const k of ['hirise', 'names', 'ground', 'dots']) {
-    if (S.show[k] && !map.hasLayer(G[k])) map.addLayer(G[k]);
-    if (!S.show[k] && map.hasLayer(G[k])) map.removeLayer(G[k]);
+    const on = S.show[k] && (k !== 'dots' || map.getZoom() >= DOTS_MIN_ZOOM);
+    if (on && !map.hasLayer(G[k])) map.addLayer(G[k]);
+    if (!on && map.hasLayer(G[k])) map.removeLayer(G[k]);
   }
 
   G.dyn.clearLayers();
@@ -177,8 +219,9 @@ function renderMap() {
   // Walk-back limit right now: ground beyond it is out of reach.
   if (S.show.reach) {
     const reach = M.reachAt(S.p, S.t);
-    for (const [edge, end] of [[base - reach, first], [base + reach, last]]) {
-      if ((end - edge) * (end - base) <= 0) continue;
+    for (const [edge, trackEnd] of [[base - reach, first], [base + reach, last]]) {
+      if ((trackEnd - edge) * (trackEnd - base) <= 0) continue;
+      const end = trackEnd > edge ? Math.min(trackEnd, edge + BEYOND_SHOWN_M) : Math.max(trackEnd, edge - BEYOND_SHOWN_M);
       add(cased(slice(edge, end), C.caution, 4, { dashArray: '1 9', lineCap: 'round' }));
       add(L.marker(ll(M.pointAtChain(route, edge)), {
         icon: flag('caution', `${ICO.caution}WALK-BACK LIMIT ${M.clockAt(S.p, S.t)}`, 30, -30), interactive: false, zIndexOffset: 700,
@@ -287,6 +330,34 @@ function renderAnswer() {
   $('#num-limit .kept').style.width = pct(kept);
 }
 
+// ---------- Mars time beside Earth time ----------
+
+const SOL_S = M.NASA.solHours * 3600;
+const hms = (sec) => `${Math.floor(sec / 3600)} h ${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')} min ${String(Math.round(sec % 60)).padStart(2, '0')} s`;
+
+// A Mars day is about 40 minutes longer than an Earth day, so the two clocks drift apart.
+// Closed, the chip shows both clocks right now. Open, it shows what that difference does to this walk.
+function renderClock() {
+  const now = Date.now();
+  const mars = M.hoursToClock(M.marsLocalHours(now, D.base.lon));
+  const utc = new Date(now).toISOString().slice(11, 16);
+  const walkH = D.tl.endT;
+  const more = !UI.clock ? '' : `
+    <table class="cmp">
+      <thead><tr><th></th><th>Mars</th><th>Earth</th></tr></thead>
+      <tr><th>One day</th><td>${hms(SOL_S)}</td><td>24 h</td></tr>
+      <tr><th>One clock hour</th><td>${Math.floor(SOL_S / 24 / 60)} min ${Math.round((SOL_S / 24) % 60)} s</td><td>60 min</td></tr>
+      <tr><th>This walk</th><td>${M.fmtDur(walkH / M.MARS_HOUR)}</td><td>${M.fmtDur(walkH)}</td></tr>
+    </table>
+    <p class="small">A Mars day (sol) runs ${Math.round((SOL_S - 86400) / 60)} minutes longer than an Earth day. Plan times on the map are Mars local time at the refuge. Oxygen is counted in Earth hours. Mars time is local mean solar time, from NASA's Mars24 algorithm.</p>`;
+  $('#clock').innerHTML = `
+    <button id="clock-main" data-act="clock" aria-expanded="${UI.clock}">
+      <span class="side"><span class="k">Mars · Gale now</span><b>${mars}</b></span>
+      <span class="side"><span class="k">Earth · UTC now</span><b>${utc}</b></span>
+      ${CHEV}
+    </button>${more}`;
+}
+
 // ---------- walk card + assumptions ----------
 
 const CHEV = '<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg>';
@@ -304,9 +375,11 @@ function renderWalkCard() {
   const row = (id, badge, cls, name, time) => `<li><button class="row${S.selected === id ? ' on' : ''}" data-act="select" data-id="${id}">
     <span class="badge ${cls}">${badge}</span><span class="name">${esc(name)}</span><time>${time}</time></button></li>`;
   el.innerHTML = `
-    <div class="card-head"><span class="k">Walk</span>
+    <div class="card-head">
+      <label class="trip"><span class="k">Walk</span>
+        <select data-trip aria-label="Choose a walk">${S.cfg.trips.map((t) => `<option value="${t.id}" ${t.id === S.trip ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
       <button class="icon-btn quiet" data-act="walk-toggle" aria-expanded="true" aria-label="Hide the walk list"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button></div>
-    <p class="goal">${esc(S.cfg.goal_short)}</p>
+    <p class="goal">${esc(trip().goal_short)}</p>
     <ol class="rows">
       ${row(base.id, 'R', 'refuge', stopName(base), S.p.startClock)}
       ${stops.map((s, i) => row(s.id, i + 1, '', stopName(s.stop), M.clockAt(S.p, arriveAt(i)))).join('')}
@@ -335,8 +408,8 @@ function assumeHTML() {
     <input id="p-${key}" ${key.endsWith('Clock') ? 'type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM"' : `type="number" step="${step}" min="0"`} value="${S.p[key]}" data-param="${key}">`;
   return `
     <h2>Science goal</h2>
-    <p>${esc(S.cfg.goal)}</p>
-    <p class="small">${esc(S.cfg.goal_note)}</p>
+    <p>${esc(trip().goal)}</p>
+    <p class="small">${esc(trip().goal_note)}</p>
     <h2>Assumptions you can change</h2>
     <div class="assume">
       ${assume('Leave refuge', 'startClock', 0, 'assumed', 'ASSUMED')}
@@ -448,6 +521,27 @@ function renderDrawer() {
 
 // ---------- stop card ----------
 
+// Photos are bundled for the boxwork stops. Every other stop asks NASA's raw-image feed
+// for the first full Navcam frame taken at that exact rover position.
+async function loadPhoto(s) {
+  s.photoState = 'loading';
+  const [site, drive] = s.id.split('_').map(Number);
+  const next = S.site.stops[S.site.stops.indexOf(s) + 1];
+  const lastSol = Math.min(next ? Math.max(next.sol - 1, s.sol) : s.sol, s.sol + 2);
+  try {
+    for (let sol = s.sol; sol <= lastSol && !s.photo; sol++) {
+      const feed = await fetch(PHOTO_FEED + sol).then((r) => r.json());
+      const im = (feed.images || []).find((x) => {
+        const m = /_F(\d{3})(\d{4})/.exec(x.imageid);
+        return /^NAV_LEFT/.test(x.camera.instrument) && x.sample_type === 'full' && m && Number(m[1]) === site && Number(m[2]) === drive;
+      });
+      if (im) s.photo = { url: im.image_files.medium, sol: im.sol, page: im.link, credit: im.credit };
+    }
+    s.photoState = s.photo ? 'ok' : 'none';
+  } catch { s.photoState = 'offline'; }
+  if (S.selected === s.id) renderStopCard();
+}
+
 function renderStopCard() {
   const card = $('#stopcard');
   if (!S.selected || UI.drawer) { card.hidden = true; shownCard = null; return; }
@@ -457,10 +551,16 @@ function renderStopCard() {
   const i = planIndex(s.id);
   const base = D.base.chain_m;
 
+  if (!s.photo && !s.photoState) loadPhoto(s);
+  const waiting = { loading: "Loading Curiosity's view from NASA", none: 'No Navcam frame found for this stop', offline: 'The photo needs a connection to NASA' }[s.photoState];
   const photo = s.photo
-    ? `<figure><img src="${s.photo.file}" alt="Curiosity Navcam view from this stop">
+    ? `<figure><img src="${s.photo.file || s.photo.url}" alt="Curiosity Navcam view from this stop">
         <figcaption><span>Navcam · sol ${s.photo.sol}</span><a href="${s.photo.page}" target="_blank" rel="noopener" title="Open the raw image on NASA's site">${esc(s.photo.credit)}</a></figcaption></figure>`
-    : '';
+    : `<div class="nophoto">${waiting}</div>`;
+  const at = S.site.stops.indexOf(s);
+  const near = (n, label) => (n
+    ? `<button data-act="select" data-id="${n.id}"><span class="k">${label}</span><span>${esc(stopName(n))}</span></button>`
+    : '<span></span>');
   const pair = (k1, v1, k2, v2, note = '') => `<div class="pair"><div><span class="k">${k1}</span><b>${v1}</b></div>
     <div><span class="k">${k2}</span><b>${v2}</b>${note ? `<i>${note}</i>` : ''}</div></div>`;
 
@@ -485,10 +585,13 @@ function renderStopCard() {
     <button class="close icon-btn" data-act="close" aria-label="Close">${ICO.cross}</button>
     ${photo}
     <div class="body">
-      <div class="kicker">${isRefuge ? 'Refuge · pressurised rover parked here' : esc(stopKind(s))}</div>
+      <div class="type">${isRefuge ? `<i class="sq" style="background:${C.refuge}"></i>Refuge`
+        : i >= 0 ? `<i style="background:${C.route}"></i>Stop ${i + 1} of ${D.stops.length}`
+        : '<i style="background:#fff"></i>Rover stop'}</div>
       <h3>${esc(stopName(s))}</h3>
+      <div class="kicker">${isRefuge ? 'Pressurised rover parked here' : esc(stopKind(s))}</div>
       ${plan}
-      ${t ? `<p class="note">${esc(t.note)} <a href="${t.source}" target="_blank" rel="noopener">NASA mission blog</a></p>` : ''}
+      ${t ? `<p class="note">${esc(t.note)} <a href="${t.source}" target="_blank" rel="noopener">${esc(t.source_label)}</a></p>` : ''}
       <details class="more" ${UI.meas ? 'open' : ''}>
         <summary>Measurements${CHEV}</summary>
         <dl class="trio">
@@ -503,6 +606,10 @@ function renderStopCard() {
         ${i >= 0 ? `<button data-act="remove" data-id="${s.id}">Remove from walk</button>` : `<button class="primary" data-act="add" data-id="${s.id}">Add to walk</button>`}
         <button data-act="refuge" data-id="${s.id}">Park refuge here</button>
       </div>`}
+      <div class="near">
+        ${near(S.site.stops[at - 1], 'Back along track')}
+        ${near(S.site.stops[at + 1], 'On along track')}
+      </div>
     </div>`;
   card.classList.remove('enter');
   if (shownCard !== s.id) {
@@ -602,48 +709,57 @@ function renderProfile() {
   const H = 96;
   const pad = { l: BAND_PAD, r: BAND_PAD, t: 26, b: 16 };
   const route = S.site.route;
-  const c0 = route[0][3];
-  const c1 = route[route.length - 1][3];
-  const elevs = route.map((r) => r[2]);
-  const e0 = Math.min(...elevs);
-  const e1 = Math.max(...elevs);
-  const x = (c) => pad.l + ((c - c0) / (c1 - c0)) * (W - pad.l - pad.r);
-  const y = (e) => H - pad.b - ((e - e0) / (e1 - e0)) * (H - pad.t - pad.b);
   const base = D.base.chain_m;
+
+  // Show the stretch of track the plan uses, with a little ground either side.
+  const chains = [base, ...D.stops.map((s) => s.chain)];
+  const plo = Math.min(...chains);
+  const phi = Math.max(...chains);
+  const margin = Math.max(150, (phi - plo) * 0.12);
+  const c0 = Math.max(route[0][3], plo - margin);
+  const c1 = Math.min(route[route.length - 1][3], phi + margin);
+  const win = M.sliceRoute(route, c0, c1);
+  const e0 = Math.min(...win.map((q) => q.elev));
+  const e1 = Math.max(...win.map((q) => q.elev));
+  const x = (c) => pad.l + ((c - c0) / (c1 - c0)) * (W - pad.l - pad.r);
+  const y = (e) => H - pad.b - ((e - e0) / Math.max(e1 - e0, 1)) * (H - pad.t - pad.b);
   const floor = H - pad.b;
-  const xy = (r) => `${x(r[3]).toFixed(1)},${y(r[2]).toFixed(1)}`;
-  const between = (lo, hi) => M.sliceRoute(route, lo, hi).map((q) => `${x(q.chain).toFixed(1)},${y(q.elev).toFixed(1)}`).join(' ');
+  const xy = (q) => `${x(q.chain).toFixed(1)},${y(q.elev).toFixed(1)}`;
+  const between = (lo, hi) => M.sliceRoute(route, Math.max(lo, c0), Math.min(hi, c1)).map(xy).join(' ');
 
-  $('#profile-cap').textContent = `Elevation along Curiosity's track, measured by the rover. ${e0.toFixed(0)} to ${e1.toFixed(0)} m.`;
+  $('#profile-cap').textContent = `Elevation along Curiosity's track, measured by the rover: ${e0.toFixed(0)} to ${e1.toFixed(0)} m. Distances are from the refuge.`;
 
-  const step = Math.max(1, Math.floor(route.length / (W / 2)));
-  const line = route.filter((_, i) => i % step === 0 || i === route.length - 1).map(xy).join(' ');
+  const step = Math.max(1, Math.floor(win.length / (W / 2)));
+  const line = win.filter((_, i) => i % step === 0 || i === win.length - 1).map(xy).join(' ');
 
+  // Distance scale, counted outward from the refuge.
+  const span = c1 - c0;
+  const tick = span > 6000 ? 1000 : span > 2500 ? 500 : 250;
   let scale = '';
-  for (let d = 0; d <= c1 - c0; d += 250) {
-    const px = x(c0 + d);
+  for (let k = Math.ceil((c0 - base) / tick); base + k * tick <= c1; k++) {
+    const px = x(base + k * tick);
     scale += `<line x1="${px}" y1="${floor}" x2="${px}" y2="${floor + 4}" stroke="${C.bone}" opacity="0.5"/>`;
-    if (d && d % 500 === 0) scale += `<text x="${px}" y="${H - 1}" text-anchor="middle">${(d / 1000).toFixed(1)} km</text>`;
+    const km = Math.abs(k * tick) / 1000;
+    if (k && (km * 1000) % (tick * 2) === 0) scale += `<text x="${px}" y="${H - 1}" text-anchor="middle">${km.toFixed(1)} km</text>`;
   }
 
   let steep = '';
-  route.forEach((r, i) => {
-    if (i && S.slopes[i] > M.NASA.suitSlopeDeg) {
+  for (let i = M.indexAtChain(route, c0) + 1; i < route.length && route[i][3] <= c1; i++) {
+    if (S.slopes[i] > M.NASA.suitSlopeDeg) {
       const q = route[i - 1];
+      const r = route[i];
       steep += `<line x1="${x(q[3])}" y1="${y(q[2])}" x2="${x(r[3])}" y2="${y(r[2])}" stroke="${C.caution}" stroke-width="4"/>`;
     }
-  });
+  }
 
   let beyond = '';
   if (S.show.reach) {
     const reach = M.reachAt(S.p, S.t);
-    for (const [a, b] of [[c0, base - reach], [base + reach, c1]]) {
+    for (const [a, b] of [[c0, Math.min(base - reach, c1)], [Math.max(base + reach, c0), c1]]) {
       if (b > a) beyond += `<rect x="${x(a)}" y="${pad.t}" width="${x(b) - x(a)}" height="${floor - pad.t}" fill="url(#prof-hatch)"/>`;
     }
   }
 
-  const chains = [base, ...D.stops.map((s) => s.chain)];
-  const planned = between(Math.min(...chains), Math.max(...chains));
   const [wlo, whi] = walkedRange();
   const walked = whi - wlo > 0.5 ? `<polyline points="${between(wlo, whi)}" fill="none" stroke="#fff" stroke-width="2.5"/>` : '';
 
@@ -665,7 +781,7 @@ function renderProfile() {
   const brk = D.res.ok ? '' : `<line x1="${x(D.res.breakAt.chain)}" y1="${pad.t - 4}" x2="${x(D.res.breakAt.chain)}" y2="${floor}" stroke="${C.warning}" stroke-width="2" stroke-dasharray="5 3"/>`;
 
   const you = M.pointAtChain(route, M.positionAt(D.tl, S.t).chain);
-  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Elevation along the route, measured by the rover">
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Elevation along the planned walk, measured by the rover">
     <defs>
       <linearGradient id="prof-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.bone}" stop-opacity="0.22"/><stop offset="1" stop-color="${C.bone}" stop-opacity="0.02"/></linearGradient>
       <pattern id="prof-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -675,7 +791,7 @@ function renderProfile() {
     <line x1="${x(c0)}" y1="${floor}" x2="${x(c1)}" y2="${floor}" stroke="${C.bone}" opacity="0.5"/>
     ${scale}${beyond}
     <polyline points="${line}" fill="none" stroke="${C.ground}" stroke-width="1.25"/>
-    <polyline points="${planned}" fill="none" stroke="${C.route}" stroke-width="2.5"/>
+    <polyline points="${between(plo, phi)}" fill="none" stroke="${C.route}" stroke-width="2.5"/>
     ${walked}${steep}${marks}${brk}
     <line x1="${x(you.chain)}" y1="${pad.t - 4}" x2="${x(you.chain)}" y2="${floor}" stroke="#fff" stroke-width="1.5"/>
     <circle cx="${x(you.chain)}" cy="${y(you.elev)}" r="5" fill="#fff" stroke="${C.bg}" stroke-width="2.5"/>
@@ -749,7 +865,7 @@ function renderCuff() {
 
   $('#cuff').innerHTML = `
     <h1>TENACITY · MARSWALK CARD</h1>
-    <p class="sub">${esc(S.site.meta.name)} · leave ${S.p.startClock} · sunset ${S.p.sunsetClock}</p>
+    <p class="sub">${esc(trip().name)}, Gale Crater · leave ${S.p.startClock} · sunset ${S.p.sunsetClock}</p>
     ${sketch}
     <table>
       <tr><th></th><th>Stop</th><th style="text-align:right">Start home by</th></tr>
@@ -776,14 +892,39 @@ function render() {
   D = derive();
   S.t = Math.min(S.t, D.tl.endT);
   renderWalkCard();
+  renderClock();
   renderDrawer();
   renderStopCard();
   renderLive();
 }
 
 function select(id) {
+  const s = S.byId.get(id);
+  if (s.photoState === 'offline') s.photoState = null;   // try again next time the card opens
   S.selected = id;
   UI.drawer = null;
+  renderDrawer();
+  renderWalkCard();
+  renderStopCard();
+  renderMap();
+  revealOnMap(s);
+}
+
+// If the selected stop sits under a floating card, slide the map just enough to uncover it.
+function revealOnMap(s) {
+  const size = map.getSize();
+  const wide = window.innerWidth > 900;
+  const floor = size.y - $('#timeline').offsetHeight - 40;
+  const free = wide ? { l: 330, r: size.x - 380, t: 100, b: floor } : { l: 30, r: size.x - 30, t: 150, b: size.y * 0.45 };
+  const pt = map.latLngToContainerPoint(ll(s));
+  const dx = pt.x < free.l ? pt.x - free.l : pt.x > free.r ? pt.x - free.r : 0;
+  const dy = pt.y < free.t ? pt.y - free.t : pt.y > free.b ? pt.y - free.b : 0;
+  if (dx || dy) map.panBy([dx, dy], { animate: false });
+}
+
+function openDrawer(tab) {
+  UI.drawer = tab;
+  if (tab) S.selected = null;
   renderDrawer();
   renderWalkCard();
   renderStopCard();
@@ -796,14 +937,10 @@ function act(action, el) {
   if (action === 'select') return select(id);
   if (action === 'more') { UI.more = !UI.more; return renderAnswer(); }
   if (action === 'walk-toggle') { UI.walk = !UI.walk; return renderWalkCard(); }
-  if (action === 'profile') { UI.profile = !UI.profile; renderTimeline(); renderProfile(); return map.invalidateSize(); }
+  if (action === 'clock') { UI.clock = !UI.clock; return renderClock(); }
+  if (action === 'profile') { UI.profile = !UI.profile; renderTimeline(); return renderProfile(); }
   if (action === 'cuff') { renderCuff(); $('#cuff-sheet').hidden = false; return; }
-  if (action === 'drawer') {
-    UI.drawer = id || null;
-    if (UI.drawer) S.selected = null;
-    renderDrawer(); renderWalkCard(); renderStopCard();
-    return renderMap();
-  }
+  if (action === 'drawer') return openDrawer(id || null);
 
   if (action === 'close') S.selected = null;
   if (action === 'add') S.plan.stops.push({ id, dwellMin: 30 });
@@ -816,7 +953,7 @@ function act(action, el) {
     const stop = S.plan.stops.find((s) => s.id === id);
     stop.dwellMin = Math.max(0, Math.min(600, stop.dwellMin + Number(el.dataset.delta)));
   }
-  if (action === 'reset') { defaultPlan(); S.t = 0; }
+  if (action === 'reset') loadTrip(S.trip, true);
   save();
   render();
 }
@@ -825,6 +962,15 @@ function wire() {
   document.body.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
     if (b) act(b.dataset.act, b);
+  });
+
+  // Switching to another ready-made walk replaces the plan and reframes the map.
+  $('#walk').addEventListener('change', (e) => {
+    if (e.target.dataset.trip === undefined) return;
+    loadTrip(e.target.value);
+    save();
+    render();
+    fitPlan();
   });
 
   // Advanced drawer: typed assumptions and layer switches.
@@ -873,6 +1019,9 @@ function wire() {
   $('#cuff-print').addEventListener('click', () => window.print());
   $('#cuff-close').addEventListener('click', () => { $('#cuff-sheet').hidden = true; });
   window.addEventListener('resize', () => { renderBand(); renderProfile(); });
+
+  // Cards and map controls stay clear of the floating timeline, whatever its height.
+  new ResizeObserver(() => $('#stage').style.setProperty('--tl-h', `${$('#timeline').offsetHeight}px`)).observe($('#timeline'));
 }
 
 async function main() {
@@ -882,12 +1031,15 @@ async function main() {
   site.stops.forEach((s) => S.byId.set(s.id, s));
   S.slopes = M.routeSlopes(site.route);
   UI.walk = window.innerWidth > 900;
-  defaultPlan();
+  loadTrip(cfg.trips[0].id, true);
   loadSaved();
   initMap();
   wire();
+  D = derive();
+  fitPlan();
   render();
   if (document.fonts) document.fonts.ready.then(() => { renderBand(); renderProfile(); });
+  setInterval(renderClock, 20000);   // the two clocks only show minutes
 }
 
 main();

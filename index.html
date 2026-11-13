@@ -14,6 +14,7 @@
   <main id="stage">
     <div id="map" aria-label="Map of the walk"></div>
     <div id="cursor-pos" aria-hidden="true"></div>
+    <div id="event-mark">NASA Space Apps Challenge 2026</div>
 
     <!-- Everything that floats over the map. The map stays the biggest thing on screen. -->
     <div id="hud">
@@ -25,7 +26,7 @@
               <path class="way" d="M11 22.5C19 22.5 16 9 25 9"/>
               <path class="bar" d="M25.5 4v10"/>
             </svg>
-            <span><strong>TENACITY</strong><small>Boxwork ridges · Gale Crater</small></span>
+            <span><strong>TENACITY</strong><small>Mars › Gale Crater</small></span>
           </span>
           <span class="say" role="status" aria-live="polite"><span id="verdict"></span><span id="verdict-sub"></span></span>
           <span class="hero" id="hero"><span class="k"></span><span class="v"></span></span>
@@ -42,27 +43,31 @@
       </header>
 
       <aside id="walk" aria-label="Walk plan"></aside>
-      <section id="stopcard" hidden></section>
-      <aside id="drawer" aria-label="Advanced" hidden></aside>
+      <div id="right">
+        <section id="clock" aria-label="Time on Mars and on Earth"></section>
+        <section id="stopcard" hidden></section>
+        <aside id="drawer" aria-label="Advanced" hidden></aside>
+      </div>
     </div>
+
+    <footer id="timeline">
+      <div class="tl-steps">
+        <button id="leg-prev" class="icon-btn" aria-label="Previous step"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button>
+        <button id="leg-next" class="icon-btn" aria-label="Next step"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg></button>
+      </div>
+      <div id="tl-label"></div>
+      <div id="band">
+        <input id="scrub" type="range" min="0" max="100" step="1" value="0" aria-label="Time in the plan, minutes after leaving">
+        <div id="band-svg"></div>
+      </div>
+      <button id="profile-toggle" data-act="profile" aria-expanded="false" aria-controls="profile-row">Ground</button>
+      <div id="profile-row" hidden>
+        <div id="profile"></div>
+        <p class="cap" id="profile-cap"></p>
+      </div>
+    </footer>
   </main>
 
-  <footer id="timeline">
-    <div class="tl-steps">
-      <button id="leg-prev" class="icon-btn" aria-label="Previous step"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button>
-      <button id="leg-next" class="icon-btn" aria-label="Next step"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg></button>
-    </div>
-    <div id="tl-label"></div>
-    <div id="band">
-      <input id="scrub" type="range" min="0" max="100" step="1" value="0" aria-label="Time in the plan, minutes after leaving">
-      <div id="band-svg"></div>
-    </div>
-    <button id="profile-toggle" data-act="profile" aria-expanded="false" aria-controls="profile-row">Ground</button>
-    <div id="profile-row" hidden>
-      <div id="profile"></div>
-      <p class="cap" id="profile-cap"></p>
-    </div>
-  </footer>
 
   <div id="cuff-sheet" hidden>
     <div class="cuff-actions">
