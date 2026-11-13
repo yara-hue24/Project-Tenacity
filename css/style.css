@@ -271,7 +271,7 @@ details.more[open] summary .chev { transform: rotate(180deg); }
 
 /* ---------- drawer: everything advanced ---------- */
 .drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 0 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
-.tabs { display: flex; gap: 18px; }
+.tabs { display: flex; gap: 16px; }
 .tabs button { min-height: 46px; padding: 0; border: 0; border-radius: 0; background: none; font-size: 11px; color: var(--muted); box-shadow: inset 0 -2px 0 transparent; }
 .tabs button:hover { color: var(--text); background: none; }
 .tabs button[aria-selected="true"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--text); }
@@ -348,6 +348,8 @@ input[type="number"]:hover, input[type="text"]:hover { border-color: var(--muted
 .mk { display: grid; place-items: center; font: 500 13px var(--mono); color: var(--bg); }
 .mk-stop { background: var(--route); border-radius: 50%; box-shadow: 0 0 0 2.5px var(--bg), 0 0 0 4px #fff; }
 .mk-refuge { background: var(--refuge); border-radius: 3px; box-shadow: 0 0 0 2.5px var(--bg), 0 0 0 4px #fff; }
+/* A rover's current position: a bone diamond, a shape nothing else on the map uses. */
+.mk-rover { background: var(--text); transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 0 2.5px var(--bg), 0 0 0 4px var(--text); cursor: pointer; }
 .mk-you { background: #fff; border-radius: 50%; box-shadow: 0 0 0 3.5px var(--bg), 0 0 0 5px #fff; }
 
 /* Leader-line labels: the name sits off the point, joined by a hairline. */

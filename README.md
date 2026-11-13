@@ -56,6 +56,7 @@ python3 tools/build_data.py
 | `js/app.js` | Map, status strip, plan panel, timeline, cuff card |
 | `data/site.json` | Snapshot of Curiosity's whole route, its 1,388 stops and the latest weather |
 | `data/photos/` | One Curiosity Navcam frame for each boxwork stop; other stops load theirs from NASA when opened |
+| `data/rovers.json` | Where Curiosity and Perseverance are now, plus Perseverance's track; refreshed from NASA when the page loads |
 | `data/targets.json` | Ready-made walks, science goals, named stops with their NASA sources |
 | `tools/build_data.py` | Rebuilds the snapshot from NASA's public feeds |
 | `vendor/leaflet/` | Leaflet 1.9.4 (BSD-2-Clause) |
@@ -76,6 +77,8 @@ python3 tools/build_data.py
 Map tiles, and photos for stops outside the boxwork, load from NASA's public Curiosity pages. Everything else is stored in this repository.
 
 Mars local time is computed with the Mars24 algorithm (Allison & McEwen 2000, NASA GISS).
+
+The map zooms out to the whole planet (OpenPlanetaryMap basemap, from NASA/USGS data) and marks where Curiosity and Perseverance stopped after their last drives, read from NASA's rover position feeds each time the page loads.
 
 ## Known limits
 

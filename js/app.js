@@ -3,6 +3,8 @@ import * as M from './model.js';
 const TILES = 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/';
 const STORE = 'tenacity.v2';
 const PHOTO_FEED = 'https://mars.nasa.gov/rss/api/?feed=raw_images&category=msl&feedtype=json&num=500&sol=';
+const M20_TILES = 'https://mars.nasa.gov/mmgis-maps/M20/Layers/';
+const GLOBAL_TILES = 'https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-mars-basemap-v0-2/all/{z}/{x}/{y}.png';
 const DOTS_MIN_ZOOM = 14.5;      // below this the 1,388 rover stops are too dense to read
 const BEYOND_SHOWN_M = 800;      // how far past the walk-back limit the warning dashes run
 const LOW_MARGIN_H = 0.5;
@@ -25,7 +27,7 @@ const cap = (s) => s[0].toUpperCase() + s.slice(1);
 const pct = (f) => `${(Math.max(0, Math.min(1, f)) * 100).toFixed(1)}%`;
 
 const S = {
-  site: null, cfg: null, byId: new Map(), slopes: [],
+  site: null, cfg: null, rovers: [], roversAt: null, byId: new Map(), slopes: [],
   p: { ...M.DEFAULTS }, trip: null, plan: null, t: 0, selected: null,
   show: { muted: true, hirise: true, names: false, ground: true, dots: true, reach: true },
 };
@@ -85,7 +87,7 @@ const planIndex = (id) => S.plan.stops.findIndex((s) => s.id === id);
 
 function initMap() {
   const crs = L.extend({}, L.CRS.EPSG3857, { R: S.site.meta.mars_radius_m });
-  map = L.map('map', { crs, zoomControl: false, minZoom: 10, maxZoom: 20, zoomSnap: 0.5, preferCanvas: true });
+  map = L.map('map', { crs, zoomControl: false, minZoom: 2, maxZoom: 20, zoomSnap: 0.5, preferCanvas: true, worldCopyJump: true });
   map.attributionControl.setPrefix(false);
   L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.control.scale({ imperial: false, position: 'bottomleft', maxWidth: 140 }).addTo(map);
@@ -97,14 +99,16 @@ function initMap() {
       const el = L.DomUtil.create('div', 'leaflet-bar tools');
       el.innerHTML = `
         <a role="button" tabindex="0" data-tool="fit" title="Show the whole walk" aria-label="Show the whole walk"><svg viewBox="0 0 18 18"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4"/><circle cx="9" cy="9" r="1.6"/></svg></a>
-        <a role="button" tabindex="0" data-tool="layers" title="Map layers and legend" aria-label="Map layers and legend"><svg viewBox="0 0 18 18"><path d="m9 2 7 4-7 4-7-4zM2 9.5l7 4 7-4M2 13l7 4 7-4"/></svg></a>`;
+        <a role="button" tabindex="0" data-tool="layers" title="Map layers and legend" aria-label="Map layers and legend"><svg viewBox="0 0 18 18"><path d="m9 2 7 4-7 4-7-4zM2 9.5l7 4 7-4M2 13l7 4 7-4"/></svg></a>
+        <a role="button" tabindex="0" data-tool="rovers" title="Where the rovers are now" aria-label="Where the rovers are now"><svg viewBox="0 0 18 18"><path d="M3 10h12V6.5H7.5L5 10M11 6.5V3.5M9.5 3.5h3"/><circle cx="4.5" cy="13" r="1.8"/><circle cx="9" cy="13" r="1.8"/><circle cx="13.5" cy="13" r="1.8"/></svg></a>`;
       L.DomEvent.disableClickPropagation(el);
       const run = (e) => {
         const tool = e.target.closest('[data-tool]');
         if (!tool || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
         e.preventDefault();
-        if (tool.dataset.tool === 'fit') fitPlan();
-        else openDrawer(UI.drawer === 'layers' ? null : 'layers');
+        const t = tool.dataset.tool;
+        if (t === 'fit') fitPlan();
+        else openDrawer(UI.drawer === t ? null : t);
       };
       el.addEventListener('click', run);
       el.addEventListener('keydown', run);
@@ -116,8 +120,18 @@ function initMap() {
   map.getPane('names').style.pointerEvents = 'none';
   [['ground', 410], ['route', 420], ['dots', 430]].forEach(([name, z]) => { map.createPane(name).style.zIndex = z; });
 
+  // Whole planet at the bottom, so zooming out from a walk ends at Mars itself.
+  L.tileLayer(GLOBAL_TILES, { maxNativeZoom: 7, maxZoom: 20, attribution: 'Global basemap: OpenPlanetaryMap' }).addTo(map);
   G.ctx = L.tileLayer(`${TILES}MSL_CTX_ortho_mosaic_6m/{z}/{x}/{y}.png`, {
     tms: true, minZoom: 6, maxNativeZoom: 13, maxZoom: 20, attribution: 'CTX: NASA/JPL-Caltech/MSSS',
+    bounds: [[-7.8441, 135.9788], [-3.3971, 139.4859]],
+  }).addTo(map);
+  // Jezero Crater, where Perseverance is: NASA's regional and close-up mosaics from its location map.
+  L.tileLayer(`${M20_TILES}HMC_13E10_co5_colorcorrect_rect/{z}/{x}/{y}.png`, {
+    tms: true, minZoom: 6, maxNativeZoom: 12, maxZoom: 20, bounds: [[15.0, 67.4993], [30.0006, 78.7492]], attribution: 'HRSC: ESA/DLR/FU Berlin',
+  }).addTo(map);
+  L.tileLayer(`${M20_TILES}M20_HiRISE_RGB_CTX_mosaic_25cm_v7_Merge_LERC_clip/{z}/{x}/{y}.png`, {
+    tms: true, minZoom: 10, maxNativeZoom: 19, maxZoom: 20, bounds: [[18.2371, 77.1575], [18.5206, 77.5115]],
   }).addTo(map);
   G.hirise = L.tileLayer(`${TILES}MSL_Gale_HiRISE-LRGB_78quads/{z}/{x}/{y}.png`, {
     tms: true, minNativeZoom: 10, maxNativeZoom: 18, maxZoom: 20,
@@ -138,6 +152,7 @@ function initMap() {
     L.circleMarker(ll(s), { pane: 'dots', radius: 13, stroke: false, fillOpacity: 0 }).on('click', () => select(s.id)),
   ]));
   G.dyn = L.layerGroup().addTo(map);
+  G.rovers = L.layerGroup().addTo(map);
 
   map.on('mousemove', (e) => {
     const { lat, lng } = e.latlng;
@@ -146,8 +161,96 @@ function initMap() {
   map.on('mouseout', () => { $('#cursor-pos').textContent = ''; });
 
   map.on('zoomend', () => { if (D) renderMap(); });
-  map.setMaxBounds(L.latLngBounds(all).pad(0.6));
+  map.setMaxBounds([[-85, -180], [85, 360]]);
 }
+
+// ---------- rovers on Mars now ----------
+
+const roverSolToday = (r) => Math.floor((Date.now() - Date.parse(r.landed_utc)) / (SOL_S * 1000));
+const roverSolDate = (r, sol) => new Date(Date.parse(r.landed_utc) + sol * SOL_S * 1000)
+  .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const fmtLatLon = (lat, lon) => `${Math.abs(lat).toFixed(4)}°${lat < 0 ? 'S' : 'N'} ${lon.toFixed(4)}°E`;
+
+// Great-circle distance on Mars, in km.
+function marsDistanceKm(a, b) {
+  const rad = Math.PI / 180;
+  const h = Math.sin(((b.lat - a.lat) * rad) / 2) ** 2
+    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(((b.lon - a.lon) * rad) / 2) ** 2;
+  return (2 * S.site.meta.mars_radius_m * Math.asin(Math.sqrt(h))) / 1000;
+}
+
+// Ask NASA where each rover is right now. If a feed cannot be reached, the bundled snapshot stays.
+async function refreshRovers() {
+  await Promise.all(S.rovers.map(async (r) => {
+    try {
+      const feed = await fetch(r.feed, { cache: 'no-store', signal: AbortSignal.timeout(10000) }).then((x) => x.json());
+      const p = feed.features[feed.features.length - 1].properties;
+      r.now = { sol: p.sol, lat: p.lat, lon: p.lon, elev_m: p.elev_geoid, dist_total_m: p.dist_total_m };
+      r.live = true;
+    } catch { r.live = false; }
+  }));
+  S.roversAt = new Date();
+  renderRoverLayer();
+  if (UI.drawer === 'rovers') renderDrawer();
+}
+
+function renderRoverLayer() {
+  G.rovers.clearLayers();
+  for (const r of S.rovers) {
+    for (const line of r.track || []) {
+      const pts = line.map((c) => [c[1], c[0]]);
+      G.rovers.addLayer(L.polyline(pts, { pane: 'ground', color: C.bg, weight: 5, opacity: 0.75, interactive: false }));
+      G.rovers.addLayer(L.polyline(pts, { pane: 'ground', color: C.ground, weight: 1.75, interactive: false }));
+    }
+    const at = [r.now.lat, r.now.lon];
+    G.rovers.addLayer(L.marker(at, { icon: flag('', `${esc(r.name.toUpperCase())} NOW`, 26, -26), interactive: false, zIndexOffset: 200 }));
+    G.rovers.addLayer(L.marker(at, { icon: icon('mk-rover', '', 16), zIndexOffset: 250, title: `${r.name}, sol ${r.now.sol}` })
+      .on('click', () => openDrawer('rovers')));
+  }
+}
+
+function goToRover(id) {
+  if (id === 'both') {
+    // Keep both markers clear of the cards on either side.
+    const wide = window.innerWidth > 900;
+    return map.fitBounds(S.rovers.map((r) => [r.now.lat, r.now.lon]), {
+      paddingTopLeft: wide ? [360, 140] : [40, 160], paddingBottomRight: wide ? [420, 160] : [40, 120], animate: false,
+    });
+  }
+  const r = S.rovers.find((x) => x.id === id);
+  map.setView([r.now.lat, r.now.lon], 16, { animate: false });
+}
+
+function roversHTML() {
+  const [a, b] = S.rovers;
+  const card = (r) => {
+    const today = roverSolToday(r);
+    return `
+    <h2>${esc(r.name)}</h2>
+    <p>${esc(r.place)} · ${esc(r.mission)}</p>
+    <dl class="cond">
+      <dt>Position</dt><dd>${fmtLatLon(r.now.lat, r.now.lon)}</dd>
+      <dt>Elevation</dt><dd>${r.now.elev_m.toFixed(0)} m</dd>
+      <dt>Last drive ended</dt><dd>sol ${r.now.sol} · about ${roverSolDate(r, r.now.sol)}</dd>
+      <dt>Today is</dt><dd>sol ${today}${today > r.now.sol ? ` · parked ${today - r.now.sol} sol${today - r.now.sol === 1 ? '' : 's'}` : ''}</dd>
+      <dt>Driven since landing</dt><dd>${(r.now.dist_total_m / 1000).toFixed(2)} km</dd>
+    </dl>
+    <p class="small"><span class="tag measured">MEASURED</span> ${r.live
+      ? `Read from NASA's position feed at ${S.roversAt.toISOString().slice(11, 16)} UTC.`
+      : `NASA's feed could not be reached. Showing the snapshot from ${esc(S.roversSnapshot)}.`}
+      <a href="${r.map}" target="_blank" rel="noopener">NASA location map</a></p>
+    <div class="actions"><button data-act="rover" data-id="${r.id}">Show ${esc(r.name)} on the map</button></div>`;
+  };
+  return `${card(a)}${card(b)}
+    <h2>Between them</h2>
+    <dl class="cond"><dt>Distance across Mars</dt><dd>${Math.round(marsDistanceKm(a.now, b.now)).toLocaleString('en-GB')} km</dd></dl>
+    <p class="small"><span class="tag derived">DERIVED</span> Great-circle distance from the two positions. Dates are worked out from each rover's landing time and the length of a sol. A position is where the rover stopped after its last drive, not a live GPS fix.</p>
+    <div class="actions">
+      <button data-act="rover" data-id="both">Show both</button>
+      <button data-act="rover" data-id="walk">Back to the walk</button>
+    </div>`;
+}
+
 
 // Frame the planned walk, leaving room for the cards that float over the map.
 function fitPlan() {
@@ -216,8 +319,11 @@ function renderMap() {
   const [wlo, whi] = walkedRange();
   if (whi - wlo > 0.5) add(cased(slice(wlo, whi), C.walked, 4));
 
+  // From far away the walk is a single dot, so its labels would only pile up.
+  const close = map.getZoom() >= 12;
+
   // Walk-back limit right now: ground beyond it is out of reach.
-  if (S.show.reach) {
+  if (S.show.reach && close) {
     const reach = M.reachAt(S.p, S.t);
     for (const [edge, trackEnd] of [[base - reach, first], [base + reach, last]]) {
       if ((trackEnd - edge) * (trackEnd - base) <= 0) continue;
@@ -231,11 +337,12 @@ function renderMap() {
 
   add(L.marker(ll(D.base), { icon: icon('mk-refuge', 'R', 26), zIndexOffset: 500 }).on('click', () => select(D.base.id)));
   D.stops.forEach((s, i) => {
+    if (!close) return;
     add(L.marker(ll(s.stop), { icon: flag('', esc(stopName(s.stop)), 30, i % 2 ? 24 : -24), interactive: false, zIndexOffset: 300 }));
     add(L.marker(ll(s.stop), { icon: icon('mk-stop', i + 1), zIndexOffset: 400 }).on('click', () => select(s.id)));
   });
 
-  if (!D.res.ok) {
+  if (!D.res.ok && close) {
     const b = D.res.breakAt;
     add(L.marker(ll(M.pointAtChain(route, b.chain)), {
       icon: flag('warning', `${ICO.cross}PLAN BREAKS ${M.clockAt(S.p, b.t)}`, 30, 44), interactive: false, zIndexOffset: 800,
@@ -491,6 +598,9 @@ const SOURCES = [
   ['Walking speed', '3.3 km/h', 'assumed', 'ASSUMED', 'Apollo 15 traverse planning. No suited Mars walking speed has been measured.', 'https://www.nasa.gov/history/alsj/'],
   ['Slow factor', '1.5×', 'assumed', 'ASSUMED', 'Our choice. Analog crews found planned walk times too optimistic.', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6442304'],
   ['Stop names and science notes', 'Curiosity mission blog', 'measured', 'MEASURED', 'NASA Science', 'https://science.nasa.gov/mission/msl-curiosity/'],
+  ['Where the rovers are now', 'End of each rover\'s last drive', 'measured', 'MEASURED', 'NASA/JPL-Caltech rover position feeds, read when the page loads', 'https://science.nasa.gov/mission/mars-2020-perseverance/location-map/'],
+  ['Mars local time', 'Mars24 algorithm', 'derived', 'DERIVED', 'Allison & McEwen 2000, NASA GISS', 'https://www.giss.nasa.gov/tools/mars24/help/algorithm.html'],
+  ['Whole-planet basemap', 'Viking and MOLA mosaic', 'measured', 'MEASURED', 'OpenPlanetaryMap, from NASA/USGS data', 'https://www.openplanetary.org/opm'],
 ];
 
 function sourcesHTML() {
@@ -512,10 +622,10 @@ function renderDrawer() {
   el.hidden = false;
   el.innerHTML = `
     <div class="drawer-head">
-      <nav class="tabs" role="tablist">${tab('assume', 'Assumptions')}${tab('layers', 'Layers')}${tab('sources', 'Sources')}</nav>
+      <nav class="tabs" role="tablist">${tab('assume', 'Plan')}${tab('layers', 'Layers')}${tab('rovers', 'Rovers')}${tab('sources', 'Sources')}</nav>
       <button class="icon-btn quiet" data-act="drawer" data-id="" aria-label="Close advanced">${ICO.cross}</button>
     </div>
-    <div class="tab">${UI.drawer === 'assume' ? assumeHTML() : UI.drawer === 'layers' ? layersHTML() : sourcesHTML()}</div>`;
+    <div class="tab">${{ assume: assumeHTML, layers: layersHTML, rovers: roversHTML, sources: sourcesHTML }[UI.drawer]()}</div>`;
   if (!shownDrawer) { el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); shownDrawer = true; }
 }
 
@@ -938,6 +1048,7 @@ function act(action, el) {
   if (action === 'more') { UI.more = !UI.more; return renderAnswer(); }
   if (action === 'walk-toggle') { UI.walk = !UI.walk; return renderWalkCard(); }
   if (action === 'clock') { UI.clock = !UI.clock; return renderClock(); }
+  if (action === 'rover') return id === 'walk' ? fitPlan() : goToRover(id);
   if (action === 'profile') { UI.profile = !UI.profile; renderTimeline(); return renderProfile(); }
   if (action === 'cuff') { renderCuff(); $('#cuff-sheet').hidden = false; return; }
   if (action === 'drawer') return openDrawer(id || null);
@@ -1025,9 +1136,11 @@ function wire() {
 }
 
 async function main() {
-  const [site, cfg] = await Promise.all(['data/site.json', 'data/targets.json'].map((u) => fetch(u).then((r) => r.json())));
+  const [site, cfg, rovers] = await Promise.all(['data/site.json', 'data/targets.json', 'data/rovers.json'].map((u) => fetch(u).then((r) => r.json())));
   S.site = site;
   S.cfg = cfg;
+  S.rovers = rovers.rovers;
+  S.roversSnapshot = rovers.snapshot_utc;
   site.stops.forEach((s) => S.byId.set(s.id, s));
   S.slopes = M.routeSlopes(site.route);
   UI.walk = window.innerWidth > 900;
@@ -1038,6 +1151,8 @@ async function main() {
   D = derive();
   fitPlan();
   render();
+  renderRoverLayer();
+  refreshRovers();
   if (document.fonts) document.fonts.ready.then(() => { renderBand(); renderProfile(); });
   setInterval(renderClock, 20000);   // the two clocks only show minutes
 }

@@ -28,6 +28,26 @@ TRAVERSE_URL = "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_traverse.js
 WEATHER_URL = "https://mars.nasa.gov/rss/api/?feed=weather&category=msl&feedtype=json"
 IMAGES_URL = "https://mars.nasa.gov/rss/api/?feed=raw_images&category=msl&feedtype=json&sol={sol}&num=500"
 
+# Where the rovers are now. The app re-reads the two position feeds when it loads;
+# this snapshot is the fallback when NASA cannot be reached.
+ROVERS = [
+    {
+        "id": "curiosity", "name": "Curiosity", "mission": "Mars Science Laboratory", "place": "Gale Crater",
+        "landed_utc": "2012-08-06T05:17:57Z",
+        "feed": "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints_current.json",
+        "map": "https://science.nasa.gov/mission/msl-curiosity/location-map/",
+        "track": None,   # Curiosity's track is the walkable route in site.json
+    },
+    {
+        "id": "perseverance", "name": "Perseverance", "mission": "Mars 2020", "place": "Jezero Crater",
+        "landed_utc": "2021-02-18T20:55:00Z",
+        "feed": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json",
+        "map": "https://science.nasa.gov/mission/mars-2020-perseverance/location-map/",
+        "track": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_traverse.json",
+    },
+]
+ROVER_TRACK_SPACING_M = 8
+
 # The whole track is walkable ground. Photos are bundled only for the boxwork campaign
 # on Mount Sharp; every other stop loads its photo from NASA when it is opened.
 PHOTO_SOL_FIRST = 4553  # "Back to the boxwork" (NASA Curiosity blog, sol 4553)
@@ -114,6 +134,50 @@ def pick_photo(sol, next_sol, site, drive):
     return None
 
 
+def rover_now(feed):
+    p = feed["features"][-1]["properties"]
+    return {
+        "sol": p["sol"], "lat": round(p["lat"], 6), "lon": round(p["lon"], 6),
+        "elev_m": round(p["elev_geoid"], 1), "dist_total_m": round(p["dist_total_m"], 1),
+    }
+
+
+def thin_track(traverse):
+    """One [lon, lat] every few metres, kept as separate lines per drive group."""
+    lines = []
+    for f in traverse["features"]:
+        g = f["geometry"]
+        for line in (g["coordinates"] if g["type"] == "MultiLineString" else [g["coordinates"]]):
+            out = []
+            for c in line:
+                if not out or ground_m(out[-1], c) >= ROVER_TRACK_SPACING_M:
+                    out.append([round(c[0], 6), round(c[1], 6)])
+            if line and out[-1] != [round(line[-1][0], 6), round(line[-1][1], 6)]:
+                out.append([round(line[-1][0], 6), round(line[-1][1], 6)])
+            if len(out) > 1:
+                if lines and lines[-1][-1] == out[0]:
+                    lines[-1].extend(out[1:])     # drives join end to start
+                else:
+                    lines.append(out)
+    return lines
+
+
+def build_rovers():
+    rovers = []
+    for r in ROVERS:
+        entry = {k: r[k] for k in ("id", "name", "mission", "place", "landed_utc", "feed", "map")}
+        entry["now"] = rover_now(fetch(r["feed"], f"{r['id']}_current.json"))
+        if r["track"]:
+            entry["track"] = thin_track(fetch(r["track"], f"{r['id']}_traverse.json"))
+        rovers.append(entry)
+    out = {"snapshot_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"), "rovers": rovers}
+    (DATA / "rovers.json").write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
+    for r in rovers:
+        n = r["now"]
+        pts = sum(len(line) for line in r.get("track", []))
+        print(f"{r['name']}: sol {n['sol']}  {n['lat']}, {n['lon']}  driven {n['dist_total_m'] / 1000:.2f} km  track points {pts}")
+
+
 def main():
     wp_all = fetch(WAYPOINTS_URL, "waypoints.json")["features"]
     traverse = fetch(TRAVERSE_URL, "traverse.json")
@@ -189,6 +253,7 @@ def main():
     print(f"route points: {len(route)}  length: {route[-1][3]:.0f} m")
     print(f"stops: {len(stops)}  with photo: {with_photo}")
     print(f"weather: sol {site['weather']['sol']} ({site['weather']['earth_date']})")
+    build_rovers()
 
 
 if __name__ == "__main__":
