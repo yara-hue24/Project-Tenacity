@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Project Tenacity · demo slides</title>
+<style>
+@font-face { font-family: "Inter"; src: url("../../vendor/fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+@page { size: 1920px 1080px; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #161616; }
+body { font-family: "Segoe UI", "Inter", system-ui, sans-serif; color: #dedede; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.slide { width: 1920px; height: 1080px; position: relative; overflow: hidden; page-break-after: always; break-after: page; background: #1b1b1b; padding: 84px 96px 96px; display: flex; flex-direction: column; }
+.slide:last-child { page-break-after: auto; break-after: auto; }
+.kicker { font-size: 26px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #ff5cf4; margin-bottom: 14px; }
+h1 { font-size: 120px; font-weight: 700; letter-spacing: 0.02em; color: #fff; line-height: 1.02; }
+h2 { font-size: 60px; font-weight: 700; color: #fff; line-height: 1.1; max-width: 1500px; }
+p, li { font-size: 30px; line-height: 1.36; }
+.lead { font-size: 42px; color: #f2f2f2; max-width: 1400px; margin-top: 22px; }
+.cols { display: grid; gap: 52px; flex: 1; margin-top: 36px; min-height: 0; }
+.c2 { grid-template-columns: 1fr 1fr; } .c37 { grid-template-columns: 37fr 63fr; } .c42 { grid-template-columns: 42fr 58fr; }
+ul { list-style: none; display: grid; gap: 20px; align-content: start; }
+li { padding-left: 34px; position: relative; }
+li::before { content: ""; position: absolute; left: 0; top: 17px; width: 14px; height: 14px; background: #ff5cf4; }
+b { color: #fff; }
+.shot { border: 2px solid #3d3d3d; background: #000; overflow: hidden; align-self: start; }
+.shot img { display: block; width: 100%; }
+.cap { font-size: 22px; color: #a9a9a9; margin-top: 10px; }
+.foot { position: absolute; left: 96px; right: 96px; bottom: 34px; display: flex; justify-content: space-between; font-size: 20px; color: #7c7c7c; }
+.num { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: #fff; color: #000; font-weight: 700; font-size: 30px; margin-right: 18px; flex: none; }
+.step { display: flex; align-items: flex-start; font-size: 30px; line-height: 1.34; }
+.steps { display: grid; gap: 26px; align-content: start; }
+.fact { border-left: 6px solid #ffd60a; padding: 6px 0 6px 26px; }
+.fact b { display: block; font-size: 64px; line-height: 1.05; }
+.fact span { font-size: 30px; color: #dedede; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; margin-top: 56px; }
+table { border-collapse: collapse; width: 100%; font-size: 28px; }
+th { text-align: left; color: #a9a9a9; font-weight: 600; font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 0 12px; border-bottom: 2px solid #404040; }
+td { padding: 16px 20px 16px 0; border-bottom: 1px solid #333; vertical-align: top; }
+td:first-child { color: #a9a9a9; width: 44%; }
+.chips { display: flex; flex-wrap: wrap; gap: 12px; align-content: start; }
+.chips span { border: 2px solid #555; padding: 6px 14px; font-size: 24px; color: #f2f2f2; background: #262626; }
+.chips span i { font-style: normal; color: #a9a9a9; }
+.go { display: inline-block; background: #4ade80; color: #000; font-weight: 700; padding: 2px 22px; }
+.nogo { display: inline-block; background: #b3001b; color: #fff; font-weight: 700; padding: 2px 22px; }
+.tags { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+.tags span { font-size: 24px; letter-spacing: 0.08em; border: 2px solid #7c7c7c; padding: 4px 14px; color: #dedede; }
+.link { font-size: 28px; color: #4b9cf5; line-height: 1.4; }
+.title { justify-content: flex-end; padding-bottom: 150px; }
+.title .bg { position: absolute; inset: 0; background: url("../img/flyover_wide.jpg") center top / cover; }
+.title .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(22,22,22,0.05) 0%, rgba(22,22,22,0.35) 36%, rgba(22,22,22,0.99) 60%); }
+.title > *:not(.bg):not(.shade) { position: relative; }
+.team { margin-top: 36px; font-size: 32px; color: #dedede; display: grid; gap: 6px; }
+.team b { color: #fff; }
+.small { font-size: 26px; color: #a9a9a9; }
+</style></head><body>
+
+<section class="slide title">
+  <div class="bg"></div><div class="shade"></div>
+  <div class="kicker">NASA Space Apps Challenge 2026 · Interplanetary Survival Guide: Martian Map</div>
+  <h1>PROJECT TENACITY</h1>
+  <p class="lead">Plan the walk on Mars before you take it. An EVA planner that sketches, simulates and validates a crew's route on real NASA data.</p>
+  <div class="team"><span>Team <b>{{TEAM}}</b></span><span>{{MEMBERS}}</span></div>
+  <div class="foot"><span>Project Tenacity</span><span>1 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">The problem</div>
+  <h2>On Mars, the limit of a walk is not distance. It is getting back to shelter in time.</h2>
+  <div class="facts">
+    <div class="fact"><b>60 min</b><span>is how long a suit's backup life support lasts if the main system fails. You must never be further from the refuge than that.</span></div>
+    <div class="fact"><b>20°</b><span>is the steepest slope a suit is required to handle: up, down or across. A map that looks flat can hide steeper ground.</span></div>
+    <div class="fact"><b>No rescue</b><span>and no satellite navigation. Oxygen, cooling water, battery, daylight and solar storms all have to be right before the airlock opens.</span></div>
+  </div>
+  <p class="lead" style="margin-top:64px">A crew needs one answer before they step outside: <b>can we go, and get home?</b></p>
+  <p class="cap" style="margin-top:auto">Sources: NASA xEMU life-support description (NTRS 20170009505); NASA Artemis III surface requirements (NTRS 20210026296).</p>
+  <div class="foot"><span>Project Tenacity</span><span>2 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">The idea</div>
+  <h2>Rover drivers simulate every drive. Astronauts should too.</h2>
+  <div class="cols c42">
+    <div>
+      <p style="margin-bottom:26px">At JPL, every rover drive is sketched, simulated and checked before it is sent to Mars. Tenacity gives a crew on foot the same loop.</p>
+      <table>
+        <tr><th>Rover planners at JPL</th><th>Tenacity, for a walk</th></tr>
+        <tr><td>Sketch the drive on the terrain</td><td><b>Sketch</b> legs and stations on the map</td></tr>
+        <tr><td>Simulate before sending</td><td><b>Simulate</b> time, oxygen, water, battery</td></tr>
+        <tr><td>Check against flight rules</td><td><b>Validate</b>: 15 rules, one <span class="go">GO</span> or <span class="nogo">NO-GO</span></td></tr>
+      </table>
+    </div>
+    <div><div class="shot"><img src="../img/planner.jpg" alt="The Tenacity planner"></div><p class="cap">The working tool: plan on the left, map in the middle, simulation and flight rules on the right, command sequence below.</p></div>
+  </div>
+  <div class="foot"><span>Project Tenacity</span><span>3 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">How it works</div>
+  <h2>Click the map. The terrain engine finds the way and shows why.</h2>
+  <div class="cols c37">
+    <div class="steps">
+      <div class="step"><span class="num">1</span><span><b>Sketch.</b> Click anywhere to add a station.</span></div>
+      <div class="step"><span class="num">2</span><span><b>Path.</b> A 5-million-cell elevation grid, in the browser, finds the easiest walk. <b style="color:#ff6b60">Red</b> cannot be crossed, <b style="color:#ffd60a">yellow</b> is slow.</span></div>
+      <div class="step"><span class="num">3</span><span><b>Simulate.</b> Pace on every slope, oxygen, water, battery, and the walk-home time from every point.</span></div>
+      <div class="step"><span class="num">4</span><span><b>Validate.</b> Rules name what blocks the walk and where. Missing data is "not evaluated", never a pass.</span></div>
+    </div>
+    <div><div class="shot"><img src="../img/why_map.jpg" alt="A sketched route with the ground it avoids coloured"></div><p class="cap">A sketched station: the dashed white line is the straight line the path finder rejected; the route goes around ground steeper than 20°.</p></div>
+  </div>
+  <div class="foot"><span>Project Tenacity</span><span>4 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">NASA data at the core</div>
+  <h2>More than 25 layers, and every one feeds the rules.</h2>
+  <div class="cols c42">
+    <div>
+      <div class="chips">
+        <span>HiRISE imagery <i>25 cm</i></span><span>HiRISE elevation <i>NASA Mars Trek</i></span><span>CTX imagery</span><span>CRISM minerals</span><span>THEMIS thermal inertia</span>
+        <span>Curiosity track <i>1,388 stops</i></span><span>Navcam photos</span><span>CheMin minerals</span><span>APXS chemistry <i>1,784 spots</i></span><span>ChemCam targets</span><span>DAN subsurface water</span>
+        <span>DONKI solar-storm forecasts</span><span>Mars24 solar time</span><span>USGS geologic map</span><span>Rover positions today</span>
+      </div>
+      <p style="margin-top:28px">The data drawn on the map are the data the rules read, so the map and the plan cannot disagree.</p>
+      <p class="small" style="margin-top:14px">Partner instruments on Curiosity: APXS (Canadian Space Agency), ChemCam (with CNES), DAN (Roscosmos).</p>
+    </div>
+    <div><div class="shot"><img src="../img/science_map.jpg" alt="Science preset with named regions"></div><p class="cap">Science view: the named regions on Curiosity's route up Mount Sharp, four in the colours of NASA's own route map.</p></div>
+  </div>
+  <div class="foot"><span>Project Tenacity</span><span>5 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">See it before you walk it</div>
+  <h2>A 3D flyover of the real ground, with Curiosity's own photo of where you are going.</h2>
+  <div class="cols c37">
+    <ul>
+      <li><b>Real terrain.</b> HiRISE elevation draped with HiRISE imagery; heights exaggerated 1.5 times and labelled so.</li>
+      <li><b>Real views.</b> The photo Curiosity took at each station appears as the camera arrives.</li>
+      <li><b>For the crew.</b> A guided tour, a large mode for gloved hands, notes on the map, and a printable cuff card.</li>
+    </ul>
+    <div><div class="shot"><img src="../img/flyover_map.jpg" alt="3D flyover of the route"></div><p class="cap">"Visualize path": the route draws itself over Mount Sharp's boxwork ridges; red hatching is ground too steep for a suit.</p></div>
+  </div>
+  <div class="foot"><span>Project Tenacity</span><span>6 / 7</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">Honest, open, and running now</div>
+  <h2>A plan the tool rejects is as useful as one it clears.</h2>
+  <div class="cols c42">
+    <div>
+      <ul>
+        <li><b>It says no.</b> This 5 km walk is <span class="nogo">NO-GO</span>: 62 minutes from shelter against a 60-minute limit.</li>
+        <li><b>Every number is tagged</b> and sourced.</li>
+      </ul>
+      <div class="tags" style="margin:10px 0 20px 34px"><span>MEASURED</span><span>NASA VALUE</span><span>DERIVED</span><span>ASSUMED</span></div>
+      <ul>
+        <li><b>It states its limits.</b> Walking speed on Mars has never been measured, and the tool says so.</li>
+        <li><b>Open source</b>, no server, 113 automated tests.</li>
+      </ul>
+      <p class="link" style="margin-top:24px">yara-hue24.github.io/Project-Tenacity<br>github.com/yara-hue24/Project-Tenacity</p>
+    </div>
+    <div><div class="shot"><img src="../img/nogo_map.jpg" alt="A plan rejected by the flight rules"></div><p class="cap">Next: a date for each plan, crew position tracking, and measured walking data when it exists.</p></div>
+  </div>
+  <div class="foot"><span>Slides and much of the code were prepared with an AI assistant (Claude) under the team's direction; screenshots show the working tool. Not affiliated with NASA.</span><span>7 / 7</span></div>
+</section>
+</body></html>

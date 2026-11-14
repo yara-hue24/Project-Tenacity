@@ -516,6 +516,7 @@ async function visualize() {
     acc += l.lengthM;
     if (l.station !== null) { const st = S.plan.stations[l.station]; const s = st.at.stop ? S.byId.get(st.at.stop) : null; stops.push({ f: acc / total, id: l.to, name: l.toName, photo: s && s.photo ? (s.photo.file || s.photo.url) : null, sol: s && s.photo ? s.photo.sol : null }); }
   }
+  for (const s of stops) if (s.photo) new Image().src = s.photo;     // fetched now, so each is ready when the camera arrives
   el.hidden = false;
   el.innerHTML = `<canvas class="gl"></canvas>
     <div class="vbar"><span class="ttl">Path visualisation · ${esc(S.plan.name || 'walk')} · ${fmtM(total)}</span><span class="grow"></span>
@@ -526,7 +527,7 @@ async function visualize() {
   let shown = null;
   const onProgress = (f) => {
     bar.style.width = `${(f * 100).toFixed(1)}%`;
-    const at = stops.find((s) => f >= s.f - 0.004 && f < s.f + 0.07);
+    const at = [...stops].reverse().find((s) => f >= s.f - 0.004 && f < s.f + 0.11);   // the latest station reached, for a few seconds
     if ((at ? at.id : null) === shown) return;
     shown = at ? at.id : null;
     pov.hidden = !at;
