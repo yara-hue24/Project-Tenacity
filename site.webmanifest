@@ -1,0 +1,15 @@
+{
+  "name": "Project Tenacity",
+  "short_name": "Tenacity",
+  "description": "An EVA planner for walking on Mars: sketch a walk, simulate it, and check it against flight rules.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#161616",
+  "theme_color": "#161616",
+  "icons": [
+    { "src": "icons/tenacity.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

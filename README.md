@@ -1,24 +1,88 @@
-# Project Tenacity
+<div align="center">
 
-An EVA planner for walking on Mars: sketch a walk at Gale Crater, simulate it before it happens, and check it against flight rules. Built on real NASA data for the ground the Curiosity rover has explored.
+<img src="icons/tenacity.svg" alt="Project Tenacity icon" width="96" height="96">
 
-Built for the NASA Space Apps Challenge 2026, "Interplanetary Survival Guide: Martian Map".
+# PROJECT TENACITY
 
-Live: https://yara-hue24.github.io/Project-Tenacity/
+**An EVA planner for walking on Mars.**<br>
+Sketch a walk at Gale Crater, simulate it before it happens, and check it against flight rules.
 
-## Screenshots
+[![Live tool](https://img.shields.io/badge/live_tool-open-0B3D91?style=flat-square)](https://yara-hue24.github.io/Project-Tenacity/)
+[![NASA Space Apps 2026](https://img.shields.io/badge/NASA_Space_Apps-2026-0B3D91?style=flat-square)](https://www.spaceappschallenge.org/2026/find-a-team/ya-rules/?tab=project)
+[![Tests](https://img.shields.io/badge/tests-113_passing-2ea44f?style=flat-square)](#run-it)
+[![Build step](https://img.shields.io/badge/build_step-none-555555?style=flat-square)](#run-it)
+[![Licence](https://img.shields.io/badge/licence-MIT-555555?style=flat-square)](LICENSE)
 
-| | |
-|---|---|
-| ![The planner](screenshots/01-planner.jpg) The planner: plan, map, simulation, flight rules, sequence | ![Why this path](screenshots/02-route-explanation.jpg) Why this path: red cannot be crossed, yellow is slow |
-| ![3D flyover](screenshots/03-3d-flyover.jpg) Visualize path: 3D flyover with Curiosity's photo of the station | ![Science regions](screenshots/04-science-regions.jpg) Science regions on Curiosity's route up Mount Sharp |
-| ![A rejected plan](screenshots/05-no-go.jpg) A walk the flight rules reject | ![Guided tour](screenshots/06-guided-tour.jpg) The guided tour |
+[**Open the tool**](https://yara-hue24.github.io/Project-Tenacity/) &nbsp;·&nbsp;
+[Demo slides](docs/Tenacity-demo-slides.pdf) &nbsp;·&nbsp;
+[Project description](docs/Tenacity-project-description.pdf) &nbsp;·&nbsp;
+[Flight rules](#flight-rules) &nbsp;·&nbsp;
+[Layers](#layers) &nbsp;·&nbsp;
+[Known limits](#known-limits)
 
-Demo slides: [docs/Tenacity-demo-slides.pdf](docs/Tenacity-demo-slides.pdf) · Project description: [docs/Tenacity-project-description.pdf](docs/Tenacity-project-description.pdf)
+<a href="https://yara-hue24.github.io/Project-Tenacity/"><img src="screenshots/01-planner.jpg" alt="The Tenacity planner: activity list, map, simulation, flight rules and sequence table" width="100%"></a>
+
+<sub>The planner. One screen holds the plan, the map, the simulation, the flight rules and the sequence.</sub>
+
+<br>
+
+<table>
+  <tr>
+    <td align="center"><b>15</b><br><sub>flight rules</sub></td>
+    <td align="center"><b>25+</b><br><sub>NASA data layers</sub></td>
+    <td align="center"><b>5 million</b><br><sub>terrain cells, about 6 m each</sub></td>
+    <td align="center"><b>113</b><br><sub>automated tests</sub></td>
+    <td align="center"><b>0</b><br><sub>servers or build steps</sub></td>
+  </tr>
+</table>
+
+</div>
+
+Built by team **YA RULES** for the NASA Space Apps Challenge 2026, challenge "Interplanetary Survival Guide: Martian Map", on real NASA data for the ground the Curiosity rover has explored.
+
+## Contents
+
+- [Who it is for](#who-it-is-for)
+- [The idea](#the-idea)
+- [Screenshots](#screenshots)
+- [What you can do](#what-you-can-do)
+- [Flight rules](#flight-rules)
+- [Layers](#layers)
+- [Run it](#run-it)
+- [How the interface was designed](#how-the-interface-was-designed)
+- [Known limits](#known-limits)
+- [Use of AI](#use-of-ai)
+- [Licence and credits](#licence-and-credits)
+
+## Who it is for
+
+Tenacity is a professional tool, not a public outreach site. It is built for two kinds of user:
+
+- **Astronauts**, who plan the walk and then follow it.
+- **Mission operations personnel** (flight controllers, EVA officers and planners), who have to clear it before the crew leaves.
+
+That is why the interface is dense, speaks in flight rules and NASA alert conventions, and shows its numbers and their sources instead of hiding them. A guided tour is built in for anyone seeing it for the first time (Help ▸ Guided tour).
 
 ## The idea
 
-Rover drivers at JPL plan every drive in a tool suite called RSVP: they sketch the drive on the terrain, simulate it, and validate it before sending it to Mars. Tenacity gives a walking astronaut the same loop. The comparison below is ours, drawn from JPL's description of the suite and from figures in a JPL paper on Perseverance drive planning (Rankin et al. 2023, linked in the app).
+Rover drivers at JPL plan every drive in a tool suite called RSVP: they sketch the drive on the terrain, simulate it, and validate it before sending it to Mars. Tenacity gives a walking astronaut the same loop.
+
+```mermaid
+flowchart LR
+    D[("NASA data<br>25+ layers")]
+    A["SKETCH<br>stations, legs,<br>keep-out zones"]
+    B["SIMULATE<br>time, oxygen, CO₂,<br>water, battery,<br>walk-home time"]
+    C["VALIDATE<br>15 flight rules"]
+    V{"GO or NO-GO"}
+    A --> B --> C --> V
+    V -. "which rule decides,<br>and where on the map" .-> A
+    D --> B
+    D --> C
+```
+
+> The top bar always answers one question: **GO or NO-GO, by what margin, and which rule decides.**
+
+The comparison below is ours, drawn from JPL's description of the suite and from figures in a JPL paper on Perseverance drive planning (Rankin et al. 2023, linked in the app).
 
 | Rover planners (RSVP) | Tenacity, for a walk |
 |---|---|
@@ -28,28 +92,61 @@ Rover drivers at JPL plan every drive in a tool suite called RSVP: they sketch t
 | HyperDrive: terrain views, several clocks, playback | Terrain layers, a clock strip (UTC, Mars mean and true solar time, elapsed time), playback |
 | ROCS: time, shadow, path-planning and terrain services | Mars time, Sun position, cast shadow, line of sight, path finding, in the browser |
 
-The top bar always answers one question: **GO or NO-GO, by what margin, and which rule decides.**
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="screenshots/02-route-explanation.jpg" alt="Why this path"><br><sub><b>Why this path.</b> Red cannot be crossed, yellow is slow, and the rejected straight line is drawn dashed.</sub></td>
+    <td width="50%"><img src="screenshots/03-3d-flyover.jpg" alt="3D flyover"><br><sub><b>Visualize path.</b> A 3D flyover with Curiosity's own photo of the station.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/04-science-regions.jpg" alt="Science regions"><br><sub><b>Science regions</b> on Curiosity's route up Mount Sharp.</sub></td>
+    <td><img src="screenshots/05-no-go.jpg" alt="A rejected plan"><br><sub><b>NO-GO.</b> A walk the flight rules reject, with the rule that decides.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/06-guided-tour.jpg" alt="Guided tour"><br><sub><b>Guided tour.</b> A blinking box points at each part of the screen in turn.</sub></td>
+    <td><img src="screenshots/01-planner.jpg" alt="The planner"><br><sub><b>The planner.</b> Plan, map, simulation, flight rules, sequence.</sub></td>
+  </tr>
+</table>
 
 ## What you can do
 
-- Take the **guided tour** (Help ▸ Guided tour): a blinking box points at each part of the screen in turn.
+**Plan the walk**
+
 - Load a ready-made walk, or switch to **Sketch** and click the map to add stations anywhere.
 - Choose how each leg is walked: along the rover's track, in a straight line, or on the easiest path the terrain engine can find under the slope limit.
+- Mark **keep-out zones**; path finding and the walk-home calculation go around them.
+- Leave **notes and marks** on the map (note, hazard, sample, photo point).
+- Play the plan back on the Mars clock; shadow and sunlight layers follow the playhead.
+- Print a wrist-sized **cuff card** of the plan.
+
+**Understand the ground**
+
 - See **why a path was chosen**: ground that cannot be crossed is red, slow ground is yellow, and the straight line the path finder rejected is drawn dashed. The leg card gives the numbers.
 - **Visualize path**: a 3D flyover of the real terrain with the route drawing itself along the ground, and Curiosity's own photo of each station as the camera arrives.
-- Mark **keep-out zones**; path finding and the walk-home calculation go around them.
 - Click any point to **probe** it: every layer is read at that point, shown or not, with its source tag.
-- Leave **notes and marks** on the map (note, hazard, sample, photo point).
-- **Save plans**, step back through the **history** of every change, undo and redo. Export and import everything as one file. Stored in the browser (IndexedDB).
-- **Search** places, samples, targets, layers, rules, commands or coordinates (Ctrl+K).
-- Play the plan back on the Mars clock; shadow and sunlight layers follow the playhead.
-- Make the **workspace** yours: drag the gutters to resize docks, fold or hide panels, swap sides, pick a ready-made workspace (Windows menu). A large mode for gloves is in Settings.
 - Every panel and term has an **i** button that explains it and links to sources.
-- Print a wrist-sized **cuff card** of the plan.
+
+**Work the way you want**
+
+- Take the **guided tour** (Help ▸ Guided tour): a blinking box points at each part of the screen in turn.
+- **Search** places, samples, targets, layers, rules, commands or coordinates (<kbd>Ctrl</kbd>+<kbd>K</kbd>).
+- **Save plans**, step back through the **history** of every change, undo and redo. Export and import everything as one file. Stored in the browser (IndexedDB).
+- Make the **workspace** yours: drag the gutters to resize docks, fold or hide panels, swap sides, pick a ready-made workspace (Windows menu). A large mode for gloves is in Settings.
 
 ## Flight rules
 
-Every rule shows PASS, or a flag: `W` warning (blocks the walk), `C` caution, `A` advisory, `NE` not evaluated. A rule whose data are missing or too old is never counted as a pass, and a plan is not GO while the return-time, oxygen or slope rule is not evaluated. Until the terrain engine has loaded the verdict reads PROVISIONAL.
+Every rule shows PASS, or a flag:
+
+| Flag | Meaning |
+|:---:|---|
+| `W` | Warning. Blocks the walk. |
+| `C` | Caution |
+| `A` | Advisory |
+| `NE` | Not evaluated: the data are missing or too old |
+
+> [!IMPORTANT]
+> A rule whose data are missing or too old is never counted as a pass, and a plan is not GO while the return-time, oxygen or slope rule is not evaluated. Until the terrain engine has loaded, the verdict reads PROVISIONAL.
 
 | Rule | Checks | Basis |
 |---|---|---|
@@ -95,13 +192,16 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Tests (walk simulation, Sun and time, terrain engine, older margin model):
+Tests (walk simulation, Sun and time, terrain engine, 3D maths, older margin model):
 
 ```sh
 node --test tests/*.mjs
 ```
 
-Refresh the data (Python standard library only):
+<details>
+<summary><b>Refresh the data</b> (Python standard library only)</summary>
+
+<br>
 
 ```sh
 python3 tools/build_data.py
@@ -110,7 +210,12 @@ python3 tools/build_overlays.py
 cd tools && python3 build_contours.py && python3 build_terrain.py && python3 build_rasters.py && python3 build_science.py && python3 build_regions.py
 ```
 
-## Layout
+</details>
+
+<details>
+<summary><b>Repository layout</b></summary>
+
+<br>
 
 | Path | What it is |
 |---|---|
@@ -131,8 +236,11 @@ cd tools && python3 build_contours.py && python3 build_terrain.py && python3 bui
 | `data/layers/` | CRISM, THEMIS, DAN, APXS, ChemCam, science regions, geology and space-weather files |
 | `data/overlays/` | Relief lines, and the slope picture and loose-ground grid used before the elevation grid loads |
 | `data/photos/` | One Curiosity Navcam frame for each boxwork stop; other stops load theirs from NASA |
+| `icons/`, `favicon.ico`, `site.webmanifest` | The tool's icon (refuge, planned route, station) as SVG and PNG, and the web app manifest |
 | `tools/` | Scripts that rebuild every data file from NASA's public services |
 | `vendor/` | Leaflet 1.9.4 (BSD-2-Clause); Inter and DM Mono (SIL Open Font License) |
+
+</details>
 
 ## How the interface was designed
 
@@ -142,6 +250,9 @@ cd tools && python3 build_contours.py && python3 build_terrain.py && python3 bui
 - **Units and time systems are always written out.** Coordinates are planetocentric latitude and east longitude.
 
 ## Known limits
+
+> [!WARNING]
+> Tenacity is a first prototype for planning and training, not a certified flight product. The limits below are stated on purpose.
 
 - **Walking speed and effort on Mars in a suit have never been measured.** Speed against slope follows the function used in NASA/MIT's SEXTANT traverse planner (from Apollo data); effort follows Santee et al. 2001, scaled to NASA design values. Both are extrapolations; walking speed is tagged `ASSUMED`. The model makes climbs very slow: about 0.5 km/h at +10° and 0.1 km/h near +20°. FR-15 flags walks that depend on those numbers.
 - The emergency walk home assumes an able walker at the emergency pace set in INCONS (never faster than the planned walking speed). An injured crew member is not modelled.
@@ -167,6 +278,8 @@ Parts of this project's code and background research were produced with an AI co
 
 ## Licence and credits
 
-Code: MIT, see `LICENSE`. Data and imagery: courtesy NASA/JPL-Caltech and the institutions named above.
+Team **YA RULES**: Adham Khairy and Yara Ehab.
+
+Code: MIT, see [`LICENSE`](LICENSE). Data and imagery: courtesy NASA/JPL-Caltech and the institutions named above.
 
 This project is not affiliated with or endorsed by NASA.
