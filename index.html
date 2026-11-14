@@ -3,76 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tenacity · Marswalk margin map</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%230f0d0b'/%3E%3Crect x='5' y='19' width='7' height='7' fill='%23f2eadd'/%3E%3Cpath d='M12 22.5C19 22.5 16 9 24.5 9' fill='none' stroke='%23f2eadd' stroke-width='2.2'/%3E%3Cpath d='M25 4.5v9' stroke='%23f2eadd' stroke-width='3'/%3E%3C/svg%3E">
+  <title>Tenacity · EVA planner for Mars</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230d0d0d'/%3E%3Crect x='5' y='19' width='7' height='7' fill='%23f2f2f2'/%3E%3Cpath d='M12 22.5C19 22.5 16 9 24.5 9' fill='none' stroke='%23ff5cf4' stroke-width='2.4'/%3E%3Ccircle cx='24.5' cy='9' r='3' fill='none' stroke='%23f2f2f2' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="vendor/fonts/dm-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <main id="stage">
-    <div id="map" aria-label="Map of the walk"></div>
-    <div id="cursor-pos" aria-hidden="true"></div>
-    <div id="event-mark">NASA Space Apps Challenge 2026</div>
+  <!-- Docked panes, edge to edge: title and status on top, plan on the left, map in the middle,
+       simulation and rules on the right, clocks under the map, sequence and console at the bottom. -->
+  <div id="app">
+    <header id="titlebar" class="bar">
+      <div><h1>TENACITY EVA PLANNER</h1></div>
+      <div><label class="k" for="trip">Plan</label><select id="trip" aria-label="Choose a plan"></select></div>
+      <div><span class="k">Mode</span><div class="seg" id="mode" role="group" aria-label="Mode"></div></div>
+      <div id="verdict" class="grow" role="status" aria-live="polite"></div>
+      <div id="alerts" aria-label="Alert counts"></div>
+      <div><button class="btn pl" data-act="cuff">Cuff card</button></div>
+    </header>
 
-    <!-- Everything that floats over the map. The map stays the biggest thing on screen. -->
-    <div id="hud">
-      <header id="answer">
-        <button id="answer-main" data-act="more" aria-expanded="false" aria-controls="answer-more">
-          <span class="brand">
-            <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
-              <rect x="4" y="19" width="7" height="7"/>
-              <path class="way" d="M11 22.5C19 22.5 16 9 25 9"/>
-              <path class="bar" d="M25.5 4v10"/>
-            </svg>
-            <span><strong>TENACITY</strong><small>Mars › Gale Crater</small></span>
-          </span>
-          <span class="say" role="status" aria-live="polite"><span id="verdict"></span><span id="verdict-sub"></span></span>
-          <span class="hero" id="hero"><span class="k"></span><span class="v"></span></span>
-          <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg>
-        </button>
-        <div id="answer-more" hidden>
-          <div class="num" id="num-turn"><span class="k"></span><span class="v"></span><span class="s"></span></div>
-          <div class="num" id="num-home"><span class="k">Walk home</span><span class="v"></span><span class="s"></span></div>
-          <div class="num" id="num-limit"><span class="k">Limiting supply</span><span class="v"></span>
-            <div class="gauge" aria-hidden="true"><i class="left"></i><i class="kept"></i></div>
-            <span class="s"></span></div>
-          <p id="verdict-long"></p>
-        </div>
-      </header>
+    <div id="mid">
+      <aside class="dock l" aria-label="Activity list">
+        <div class="hd">Activity list <small id="act-sum"></small></div>
+        <div id="activity"></div>
+        <div class="hd">Cursor</div>
+        <div id="cursor"></div>
+      </aside>
 
-      <aside id="walk" aria-label="Walk plan"></aside>
-      <div id="right">
-        <section id="clock" aria-label="Time on Mars and on Earth"></section>
-        <section id="stopcard" hidden></section>
-        <aside id="drawer" aria-label="Advanced" hidden></aside>
-      </div>
+      <main id="mapwrap">
+        <div id="preset" role="group" aria-label="Layer preset"></div>
+        <div id="map" aria-label="Map of the walk"></div>
+        <div id="north" aria-hidden="true">N ↑</div>
+        <details id="legend" open><summary>Legend</summary><div class="g" id="legend-body"></div></details>
+      </main>
+
+      <aside class="dock r" aria-label="Simulation, rules and probe">
+        <div id="sim"></div>
+        <div id="rules"></div>
+        <div id="probe"></div>
+      </aside>
     </div>
 
-    <footer id="timeline">
-      <div class="tl-steps">
-        <button id="leg-prev" class="icon-btn" aria-label="Previous step"><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></button>
-        <button id="leg-next" class="icon-btn" aria-label="Next step"><svg viewBox="0 0 16 16"><path d="m6 3 5 5-5 5"/></svg></button>
-      </div>
-      <div id="tl-label"></div>
-      <div id="band">
-        <input id="scrub" type="range" min="0" max="100" step="1" value="0" aria-label="Time in the plan, minutes after leaving">
-        <div id="band-svg"></div>
-      </div>
-      <button id="profile-toggle" data-act="profile" aria-expanded="false" aria-controls="profile-row">Ground</button>
-      <div id="profile-row" hidden>
-        <div id="profile"></div>
-        <p class="cap" id="profile-cap"></p>
-      </div>
-    </footer>
-  </main>
+    <div id="clock" class="bar" aria-label="Clocks and playback"></div>
 
+    <div id="bot">
+      <section>
+        <nav class="tabs" id="tabs" role="tablist"></nav>
+        <div id="tabbody"></div>
+      </section>
+      <section id="con" aria-label="Console">
+        <nav class="tabs"><button aria-selected="true">Console</button></nav>
+        <div id="conbody" role="log"></div>
+      </section>
+    </div>
+
+    <footer id="status"><span id="status-text"></span><span>NASA Space Apps Challenge 2026</span></footer>
+  </div>
 
   <div id="cuff-sheet" hidden>
     <div class="cuff-actions">
-      <button id="cuff-print" class="primary">Print</button>
-      <button id="cuff-close">Close</button>
+      <button id="cuff-print" class="btn">Print</button>
+      <button id="cuff-close" class="btn pl">Close</button>
     </div>
     <article id="cuff"></article>
   </div>

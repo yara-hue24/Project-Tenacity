@@ -17,7 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "tools" / ".cache" / "chemin"
 BASE = "https://pds-geosciences.wustl.edu/msl/msl-m-chemin-4-rdr-v1/mslcmn_1xxx/data/rdr5/"
-UA = "tenacity-data-snapshot/1.0"
+UA = "data-snapshot/1.0"
 
 # A product is tagged with where the rover was when CheMin ran, which is normally where the sample
 # was collected. Two cases break that, and both are filtered out below:

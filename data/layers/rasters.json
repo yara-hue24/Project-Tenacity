@@ -1,0 +1,1203 @@
+[
+ {
+  "id": "crism_hyd_frt0000b6f1",
+  "title": "Hydrated minerals (CRISM HYD, scene FRT0000B6F1)",
+  "file": "data/layers/crism_frt0000b6f1_hyd.png",
+  "bounds": [
+   [
+    -4.880113,
+    137.3199654
+   ],
+   [
+    -4.6933554,
+    137.4803037
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Magenta: polyhydrated sulfates",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Yellow to green: monohydrated sulfates",
+    "rgb": [
+     200,
+     230,
+     40
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (clays, glass, carbonate, zeolite)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = SINDEX2, spectral index keyed to bound water bands indicative of hydrated sulfates; green = BD2100_2, 2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates; blue = BD1900_2, 1900 nm band depth attributable to bound molecular H2O. Polyhydrated sulfates have strong 1900 nm and 2400 nm bands and appear magenta; monohydrated sulfates have a strong 2100 nm band and appear yellow/green; blue indicates other hydrated minerals (such as clays, glass, carbonate or zeolite). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brhydj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000B6F1_07_BRHYDJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brhydj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000B6F1, acquired 2008-07-09. Cropped to the map box from 775 x 714 to 528 x 615 pixels; 96% of the cropped image has data, the rest is transparent. 957 of 1388 rover stops fall on a valid pixel (sols 1448 to 5070). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 193 m west and 71 m north (measured, see 'registration'; correlation 0.64 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 59 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_hyd",
+  "scene": "frt0000b6f1",
+  "acquired": "2008-07-09",
+  "width": 528,
+  "height": 615,
+  "bytes": 550621,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "SINDEX2",
+    "meaning": "spectral index keyed to bound water bands indicative of hydrated sulfates",
+    "value_at_0": 0.005,
+    "value_at_254": 0.029382
+   },
+   {
+    "channel": "green",
+    "parameter": "BD2100_2",
+    "meaning": "2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates",
+    "value_at_0": 0.0,
+    "value_at_254": 0.019503
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900_2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.046942
+   }
+  ],
+  "stops_on_valid_pixels": 957,
+  "bounds_label": [
+   [
+    -4.8813063,
+    137.3232261
+   ],
+   [
+    -4.6945487,
+    137.4835644
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0032607,
+   "move_north_deg": 0.0011933,
+   "move_east_m": -193,
+   "move_north_m": 71,
+   "r_at_best_shift": 0.64,
+   "r_with_label_bounds": -0.19,
+   "points": 28876,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -252,
+     "move_north_m": 99,
+     "r": 0.81
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -173,
+     "move_north_m": 54,
+     "r": 0.81
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000B6F1_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_hyd_frt0000c0ef",
+  "title": "Hydrated minerals (CRISM HYD, scene FRT0000C0EF)",
+  "file": "data/layers/crism_frt0000c0ef_hyd.png",
+  "bounds": [
+   [
+    -4.706872,
+    137.3199569
+   ],
+   [
+    -4.5498742,
+    137.4307968
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Magenta: polyhydrated sulfates",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Yellow to green: monohydrated sulfates",
+    "rgb": [
+     200,
+     230,
+     40
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (clays, glass, carbonate, zeolite)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = SINDEX2, spectral index keyed to bound water bands indicative of hydrated sulfates; green = BD2100_2, 2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates; blue = BD1900_2, 1900 nm band depth attributable to bound molecular H2O. Polyhydrated sulfates have strong 1900 nm and 2400 nm bands and appear magenta; monohydrated sulfates have a strong 2100 nm band and appear yellow/green; blue indicates other hydrated minerals (such as clays, glass, carbonate or zeolite). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brhydj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000C0EF_07_BRHYDJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brhydj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000C0EF, acquired 2008-08-17. Cropped to the map box from 799 x 757 to 365 x 517 pixels; 80% of the cropped image has data, the rest is transparent. 311 of 1388 rover stops fall on a valid pixel (sols 540 to 1509). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 158 m west and 161 m north (measured, see 'registration'; correlation 0.87 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 30 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_hyd",
+  "scene": "frt0000c0ef",
+  "acquired": "2008-08-17",
+  "width": 365,
+  "height": 517,
+  "bytes": 209362,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "SINDEX2",
+    "meaning": "spectral index keyed to bound water bands indicative of hydrated sulfates",
+    "value_at_0": 0.005,
+    "value_at_254": 0.029382
+   },
+   {
+    "channel": "green",
+    "parameter": "BD2100_2",
+    "meaning": "2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates",
+    "value_at_0": 0.0,
+    "value_at_254": 0.019503
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900_2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.046942
+   }
+  ],
+  "stops_on_valid_pixels": 311,
+  "bounds_label": [
+   [
+    -4.7095811,
+    137.3226255
+   ],
+   [
+    -4.5525833,
+    137.4334654
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0026686,
+   "move_north_deg": 0.0027091,
+   "move_east_m": -158,
+   "move_north_m": 161,
+   "r_at_best_shift": 0.87,
+   "r_with_label_bounds": -0.19,
+   "points": 13700,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -181,
+     "move_north_m": 131,
+     "r": 0.83
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -155,
+     "move_north_m": 164,
+     "r": 0.9
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000C0EF_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_hyd_frt0002037a",
+  "title": "Hydrated minerals (CRISM HYD, scene FRT0002037A)",
+  "file": "data/layers/crism_frt0002037a_hyd.png",
+  "bounds": [
+   [
+    -4.6603759,
+    137.4014261
+   ],
+   [
+    -4.5498397,
+    137.4800768
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Magenta: polyhydrated sulfates",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Yellow to green: monohydrated sulfates",
+    "rgb": [
+     200,
+     230,
+     40
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (clays, glass, carbonate, zeolite)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = SINDEX2, spectral index keyed to bound water bands indicative of hydrated sulfates; green = BD2100_2, 2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates; blue = BD1900_2, 1900 nm band depth attributable to bound molecular H2O. Polyhydrated sulfates have strong 1900 nm and 2400 nm bands and appear magenta; monohydrated sulfates have a strong 2100 nm band and appear yellow/green; blue indicates other hydrated minerals (such as clays, glass, carbonate or zeolite). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brhydj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0002037A_07_BRHYDJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brhydj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0002037A, acquired 2011-09-11. Cropped to the map box from 764 x 664 to 259 x 364 pixels; 89% of the cropped image has data, the rest is transparent. 152 of 1388 rover stops fall on a valid pixel (sols 3 to 595). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 145 m west and 178 m north (measured, see 'registration'; correlation 0.69 after the move, -0.02 before). The two halves of the scene differ from this single shift by up to about 31 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_hyd",
+  "scene": "frt0002037a",
+  "acquired": "2011-09-11",
+  "width": 259,
+  "height": 364,
+  "bytes": 114618,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "SINDEX2",
+    "meaning": "spectral index keyed to bound water bands indicative of hydrated sulfates",
+    "value_at_0": 0.005,
+    "value_at_254": 0.029382
+   },
+   {
+    "channel": "green",
+    "parameter": "BD2100_2",
+    "meaning": "2100 nm band depth attributable to a shifted H2O band exhibited by monohydrated sulfates",
+    "value_at_0": 0.0,
+    "value_at_254": 0.019503
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900_2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.046942
+   }
+  ],
+  "stops_on_valid_pixels": 152,
+  "bounds_label": [
+   [
+    -4.6633819,
+    137.4038806
+   ],
+   [
+    -4.5528457,
+    137.4825313
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0024545,
+   "move_north_deg": 0.003006,
+   "move_east_m": -145,
+   "move_north_m": 178,
+   "r_at_best_shift": 0.69,
+   "r_with_label_bounds": -0.02,
+   "points": 10492,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -176,
+     "move_north_m": 152,
+     "r": 0.65
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -142,
+     "move_north_m": 181,
+     "r": 0.74
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0002037A_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_phy_frt0000b6f1",
+  "title": "Clays and other hydroxylated minerals (CRISM PHY, scene FRT0000B6F1)",
+  "file": "data/layers/crism_frt0000b6f1_phy.png",
+  "bounds": [
+   [
+    -4.880113,
+    137.3199654
+   ],
+   [
+    -4.6933554,
+    137.4803037
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: Fe/Mg clays (magenta when hydrated)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Magenta: hydrated Fe/Mg clays",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Green: Al clays or hydrated silica (cyan when hydrated)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Cyan: hydrated Al clays or hydrated silica",
+    "rgb": [
+     0,
+     230,
+     230
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (sulfates, glass, carbonate)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = D2300, 2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate; green = D2200, 2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica; blue = BD1900R2, 1900 nm band depth attributable to bound molecular H2O. Fe/Mg-OH bearing minerals (for example Fe/Mg clays) appear red, or magenta when hydrated; Al/Si-OH bearing minerals (Al clays or hydrated silica) appear green, or cyan when hydrated; blue indicates other hydrated minerals (such as sulfates, glass, carbonate or water ice). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brphyj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000B6F1_07_BRPHYJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brphyj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000B6F1, acquired 2008-07-09. Cropped to the map box from 775 x 714 to 528 x 615 pixels; 96% of the cropped image has data, the rest is transparent. 957 of 1388 rover stops fall on a valid pixel (sols 1448 to 5070). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 193 m west and 71 m north (measured, see 'registration'; correlation 0.64 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 59 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_phy",
+  "scene": "frt0000b6f1",
+  "acquired": "2008-07-09",
+  "width": 528,
+  "height": 615,
+  "bytes": 304859,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "D2300",
+    "meaning": "2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate",
+    "value_at_0": 0.0,
+    "value_at_254": 0.033929
+   },
+   {
+    "channel": "green",
+    "parameter": "D2200",
+    "meaning": "2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica",
+    "value_at_0": 0.0025,
+    "value_at_254": 0.019931
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900R2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.049743
+   }
+  ],
+  "stops_on_valid_pixels": 957,
+  "bounds_label": [
+   [
+    -4.8813063,
+    137.3232261
+   ],
+   [
+    -4.6945487,
+    137.4835644
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0032607,
+   "move_north_deg": 0.0011933,
+   "move_east_m": -193,
+   "move_north_m": 71,
+   "r_at_best_shift": 0.64,
+   "r_with_label_bounds": -0.19,
+   "points": 28876,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -252,
+     "move_north_m": 99,
+     "r": 0.81
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -173,
+     "move_north_m": 54,
+     "r": 0.81
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000B6F1_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_phy_frt0000c0ef",
+  "title": "Clays and other hydroxylated minerals (CRISM PHY, scene FRT0000C0EF)",
+  "file": "data/layers/crism_frt0000c0ef_phy.png",
+  "bounds": [
+   [
+    -4.706872,
+    137.3199569
+   ],
+   [
+    -4.5498742,
+    137.4307968
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: Fe/Mg clays (magenta when hydrated)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Magenta: hydrated Fe/Mg clays",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Green: Al clays or hydrated silica (cyan when hydrated)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Cyan: hydrated Al clays or hydrated silica",
+    "rgb": [
+     0,
+     230,
+     230
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (sulfates, glass, carbonate)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = D2300, 2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate; green = D2200, 2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica; blue = BD1900R2, 1900 nm band depth attributable to bound molecular H2O. Fe/Mg-OH bearing minerals (for example Fe/Mg clays) appear red, or magenta when hydrated; Al/Si-OH bearing minerals (Al clays or hydrated silica) appear green, or cyan when hydrated; blue indicates other hydrated minerals (such as sulfates, glass, carbonate or water ice). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brphyj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000C0EF_07_BRPHYJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brphyj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000C0EF, acquired 2008-08-17. Cropped to the map box from 799 x 757 to 365 x 517 pixels; 80% of the cropped image has data, the rest is transparent. 311 of 1388 rover stops fall on a valid pixel (sols 540 to 1509). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 158 m west and 161 m north (measured, see 'registration'; correlation 0.87 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 30 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_phy",
+  "scene": "frt0000c0ef",
+  "acquired": "2008-08-17",
+  "width": 365,
+  "height": 517,
+  "bytes": 69375,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "D2300",
+    "meaning": "2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate",
+    "value_at_0": 0.0,
+    "value_at_254": 0.033929
+   },
+   {
+    "channel": "green",
+    "parameter": "D2200",
+    "meaning": "2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica",
+    "value_at_0": 0.0025,
+    "value_at_254": 0.019931
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900R2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.049743
+   }
+  ],
+  "stops_on_valid_pixels": 311,
+  "bounds_label": [
+   [
+    -4.7095811,
+    137.3226255
+   ],
+   [
+    -4.5525833,
+    137.4334654
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0026686,
+   "move_north_deg": 0.0027091,
+   "move_east_m": -158,
+   "move_north_m": 161,
+   "r_at_best_shift": 0.87,
+   "r_with_label_bounds": -0.19,
+   "points": 13700,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -181,
+     "move_north_m": 131,
+     "r": 0.83
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -155,
+     "move_north_m": 164,
+     "r": 0.9
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000C0EF_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_phy_frt0002037a",
+  "title": "Clays and other hydroxylated minerals (CRISM PHY, scene FRT0002037A)",
+  "file": "data/layers/crism_frt0002037a_phy.png",
+  "bounds": [
+   [
+    -4.6603759,
+    137.4014261
+   ],
+   [
+    -4.5498397,
+    137.4800768
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: Fe/Mg clays (magenta when hydrated)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Magenta: hydrated Fe/Mg clays",
+    "rgb": [
+     255,
+     0,
+     255
+    ]
+   },
+   {
+    "label": "Green: Al clays or hydrated silica (cyan when hydrated)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Cyan: hydrated Al clays or hydrated silica",
+    "rgb": [
+     0,
+     230,
+     230
+    ]
+   },
+   {
+    "label": "Blue: other hydrated minerals (sulfates, glass, carbonate)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = D2300, 2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate; green = D2200, 2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica; blue = BD1900R2, 1900 nm band depth attributable to bound molecular H2O. Fe/Mg-OH bearing minerals (for example Fe/Mg clays) appear red, or magenta when hydrated; Al/Si-OH bearing minerals (Al clays or hydrated silica) appear green, or cyan when hydrated; blue indicates other hydrated minerals (such as sulfates, glass, carbonate or water ice). Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brphyj_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0002037A_07_BRPHYJ_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brphyj_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0002037A, acquired 2011-09-11. Cropped to the map box from 764 x 664 to 259 x 364 pixels; 89% of the cropped image has data, the rest is transparent. 152 of 1388 rover stops fall on a valid pixel (sols 3 to 595). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 145 m west and 178 m north (measured, see 'registration'; correlation 0.69 after the move, -0.02 before). The two halves of the scene differ from this single shift by up to about 31 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_phy",
+  "scene": "frt0002037a",
+  "acquired": "2011-09-11",
+  "width": 259,
+  "height": 364,
+  "bytes": 64436,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "D2300",
+    "meaning": "2300 nm spectral drop-off associated with Fe/Mg phyllosilicate or Mg-carbonate",
+    "value_at_0": 0.0,
+    "value_at_254": 0.033929
+   },
+   {
+    "channel": "green",
+    "parameter": "D2200",
+    "meaning": "2200 nm spectral drop-off associated with Al-phyllosilicate or hydrated silica",
+    "value_at_0": 0.0025,
+    "value_at_254": 0.019931
+   },
+   {
+    "channel": "blue",
+    "parameter": "BD1900R2",
+    "meaning": "1900 nm band depth attributable to bound molecular H2O",
+    "value_at_0": 0.0,
+    "value_at_254": 0.049743
+   }
+  ],
+  "stops_on_valid_pixels": 152,
+  "bounds_label": [
+   [
+    -4.6633819,
+    137.4038806
+   ],
+   [
+    -4.5528457,
+    137.4825313
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0024545,
+   "move_north_deg": 0.003006,
+   "move_east_m": -145,
+   "move_north_m": 178,
+   "r_at_best_shift": 0.69,
+   "r_with_label_bounds": -0.02,
+   "points": 10492,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -176,
+     "move_north_m": 152,
+     "r": 0.65
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -142,
+     "move_north_m": 181,
+     "r": 0.74
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0002037A_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_fm2_frt0000b6f1",
+  "title": "Iron minerals (CRISM FM2, scene FRT0000B6F1)",
+  "file": "data/layers/crism_frt0000b6f1_fm2.png",
+  "bounds": [
+   [
+    -4.880113,
+    137.3199654
+   ],
+   [
+    -4.6933554,
+    137.4803037
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: nanophase ferric oxides (530 nm band)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Green: coarser-grained iron minerals or low-Ca pyroxene (920 nm band)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Blue: dust-free or more mafic surfaces (1000 nm band)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = BD530_2, 530 nm band depth indicating the presence of nanophase ferric oxides; green = BD920_2, 920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene; blue = BDI1000VIS, 1000 nm VNIR band depth highlighting dust-free or more mafic surfaces. Particularly sensitive to olivine and pyroxene, as well as nanophase ferric oxide and crystalline ferric or ferrous minerals. Red often indicates nanophase ferric oxides, green coarser-grained iron-bearing minerals, blue dust-free or more mafic surfaces. The SIS table of summary parameters adds for the red band (BD530_2): higher value has more crystalline hematite. The SIS text names the red and green bands BD530 and BD920; the label of this file names their revised versions BD530_2 and BD920_2. Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brfm2j_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000B6F1_07_BRFM2J_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_191/frt0000b6f1/frt0000b6f1_07_brfm2j_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000B6F1, acquired 2008-07-09. Cropped to the map box from 775 x 714 to 528 x 615 pixels; 96% of the cropped image has data, the rest is transparent. 957 of 1388 rover stops fall on a valid pixel (sols 1448 to 5070). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 193 m west and 71 m north (measured, see 'registration'; correlation 0.64 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 59 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_fm2",
+  "scene": "frt0000b6f1",
+  "acquired": "2008-07-09",
+  "width": 528,
+  "height": 615,
+  "bytes": 635880,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "BD530_2",
+    "meaning": "530 nm band depth indicating the presence of nanophase ferric oxides",
+    "value_at_0": 0.0,
+    "value_at_254": 0.295732
+   },
+   {
+    "channel": "green",
+    "parameter": "BD920_2",
+    "meaning": "920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene",
+    "value_at_0": 0.0,
+    "value_at_254": 0.021822
+   },
+   {
+    "channel": "blue",
+    "parameter": "BDI1000VIS",
+    "meaning": "1000 nm VNIR band depth highlighting dust-free or more mafic surfaces",
+    "value_at_0": 0.0,
+    "value_at_254": 0.034783
+   }
+  ],
+  "stops_on_valid_pixels": 957,
+  "bounds_label": [
+   [
+    -4.8813063,
+    137.3232261
+   ],
+   [
+    -4.6945487,
+    137.4835644
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0032607,
+   "move_north_deg": 0.0011933,
+   "move_east_m": -193,
+   "move_north_m": 71,
+   "r_at_best_shift": 0.64,
+   "r_with_label_bounds": -0.19,
+   "points": 28876,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -252,
+     "move_north_m": 99,
+     "r": 0.81
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -173,
+     "move_north_m": 54,
+     "r": 0.81
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000B6F1_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_fm2_frt0000c0ef",
+  "title": "Iron minerals (CRISM FM2, scene FRT0000C0EF)",
+  "file": "data/layers/crism_frt0000c0ef_fm2.png",
+  "bounds": [
+   [
+    -4.706872,
+    137.3199569
+   ],
+   [
+    -4.5498742,
+    137.4307968
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: nanophase ferric oxides (530 nm band)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Green: coarser-grained iron minerals or low-Ca pyroxene (920 nm band)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Blue: dust-free or more mafic surfaces (1000 nm band)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = BD530_2, 530 nm band depth indicating the presence of nanophase ferric oxides; green = BD920_2, 920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene; blue = BDI1000VIS, 1000 nm VNIR band depth highlighting dust-free or more mafic surfaces. Particularly sensitive to olivine and pyroxene, as well as nanophase ferric oxide and crystalline ferric or ferrous minerals. Red often indicates nanophase ferric oxides, green coarser-grained iron-bearing minerals, blue dust-free or more mafic surfaces. The SIS table of summary parameters adds for the red band (BD530_2): higher value has more crystalline hematite. The SIS text names the red and green bands BD530 and BD920; the label of this file names their revised versions BD530_2 and BD920_2. Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brfm2j_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0000C0EF_07_BRFM2J_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2008/2008_230/frt0000c0ef/frt0000c0ef_07_brfm2j_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0000C0EF, acquired 2008-08-17. Cropped to the map box from 799 x 757 to 365 x 517 pixels; 80% of the cropped image has data, the rest is transparent. 311 of 1388 rover stops fall on a valid pixel (sols 540 to 1509). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 158 m west and 161 m north (measured, see 'registration'; correlation 0.87 after the move, -0.19 before). The two halves of the scene differ from this single shift by up to about 30 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_fm2",
+  "scene": "frt0000c0ef",
+  "acquired": "2008-08-17",
+  "width": 365,
+  "height": 517,
+  "bytes": 155704,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "BD530_2",
+    "meaning": "530 nm band depth indicating the presence of nanophase ferric oxides",
+    "value_at_0": 0.0,
+    "value_at_254": 0.281686
+   },
+   {
+    "channel": "green",
+    "parameter": "BD920_2",
+    "meaning": "920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene",
+    "value_at_0": 0.0,
+    "value_at_254": 0.021822
+   },
+   {
+    "channel": "blue",
+    "parameter": "BDI1000VIS",
+    "meaning": "1000 nm VNIR band depth highlighting dust-free or more mafic surfaces",
+    "value_at_0": 0.0,
+    "value_at_254": 0.234704
+   }
+  ],
+  "stops_on_valid_pixels": 311,
+  "bounds_label": [
+   [
+    -4.7095811,
+    137.3226255
+   ],
+   [
+    -4.5525833,
+    137.4334654
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0026686,
+   "move_north_deg": 0.0027091,
+   "move_east_m": -158,
+   "move_north_m": 161,
+   "r_at_best_shift": 0.87,
+   "r_with_label_bounds": -0.19,
+   "points": 13700,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -181,
+     "move_north_m": 131,
+     "r": 0.83
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -155,
+     "move_north_m": 164,
+     "r": 0.9
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0000C0EF_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "crism_fm2_frt0002037a",
+  "title": "Iron minerals (CRISM FM2, scene FRT0002037A)",
+  "file": "data/layers/crism_frt0002037a_fm2.png",
+  "bounds": [
+   [
+    -4.6603759,
+    137.4014261
+   ],
+   [
+    -4.5498397,
+    137.4800768
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend": [
+   {
+    "label": "Red: nanophase ferric oxides (530 nm band)",
+    "rgb": [
+     255,
+     40,
+     40
+    ]
+   },
+   {
+    "label": "Green: coarser-grained iron minerals or low-Ca pyroxene (920 nm band)",
+    "rgb": [
+     40,
+     220,
+     60
+    ]
+   },
+   {
+    "label": "Blue: dust-free or more mafic surfaces (1000 nm band)",
+    "rgb": [
+     40,
+     80,
+     255
+    ]
+   }
+  ],
+  "legend_note": "Verified. red = BD530_2, 530 nm band depth indicating the presence of nanophase ferric oxides; green = BD920_2, 920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene; blue = BDI1000VIS, 1000 nm VNIR band depth highlighting dust-free or more mafic surfaces. Particularly sensitive to olivine and pyroxene, as well as nanophase ferric oxide and crystalline ferric or ferrous minerals. Red often indicates nanophase ferric oxides, green coarser-grained iron-bearing minerals, blue dust-free or more mafic surfaces. The SIS table of summary parameters adds for the red band (BD530_2): higher value has more crystalline hematite. The SIS text names the red and green bands BD530 and BD920; the label of this file names their revised versions BD530_2 and BD920_2. Band names are from this file's PDS label (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brfm2j_mtr3.lbl); the wording is from the CRISM Data Product SIS v1.3.7.7, list of browse products (https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/document/crism_dpsis.htm), which cites Viviano-Beck et al. 2014. Colours show the relative strength of spectral bands inside this one scene, not amounts of a mineral, and are not comparable between scenes: each scene has its own stretch. The label says spectra must be analysed for a positive mineral identification.",
+  "resolution_m": 18,
+  "source": "MRO CRISM map-projected targeted reduced data record (MTRDR) browse product FRT0002037A_07_BRFM2J_MTR3, PDS Geosciences Node",
+  "source_url": "https://pds-geosciences.wustl.edu/mro/mro-m-crism-5-rdr-mptargeted-v1/mrocr_4001/browse/2011/2011_254/frt0002037a/frt0002037a_07_brfm2j_mtr3.png",
+  "credit": "NASA/JPL-Caltech/JHUAPL (MRO CRISM), PDS Geosciences Node",
+  "notes": "MRO CRISM scene FRT0002037A, acquired 2011-09-11. Cropped to the map box from 764 x 664 to 259 x 364 pixels; 89% of the cropped image has data, the rest is transparent. 152 of 1388 rover stops fall on a valid pixel (sols 3 to 595). bounds_label are the pixel outer edges worked out from the PDS label. With those bounds the scene sits off the HiRISE base map, so 'bounds' are moved 145 m west and 178 m north (measured, see 'registration'; correlation 0.69 after the move, -0.02 before). The two halves of the scene differ from this single shift by up to about 31 m, so expect that much error in places. The pixels are not resampled.",
+  "group": "crism_fm2",
+  "scene": "frt0002037a",
+  "acquired": "2011-09-11",
+  "width": 259,
+  "height": 364,
+  "bytes": 113626,
+  "legend_colours": "nominal colours named in the documentation, not sampled from this image",
+  "channels": [
+   {
+    "channel": "red",
+    "parameter": "BD530_2",
+    "meaning": "530 nm band depth indicating the presence of nanophase ferric oxides",
+    "value_at_0": 0.0,
+    "value_at_254": 0.281686
+   },
+   {
+    "channel": "green",
+    "parameter": "BD920_2",
+    "meaning": "920 nm band depth highlighting coarser-grained ferric minerals or low-Ca pyroxene",
+    "value_at_0": 0.0,
+    "value_at_254": 0.021822
+   },
+   {
+    "channel": "blue",
+    "parameter": "BDI1000VIS",
+    "meaning": "1000 nm VNIR band depth highlighting dust-free or more mafic surfaces",
+    "value_at_0": 0.0,
+    "value_at_254": 0.242237
+   }
+  ],
+  "stops_on_valid_pixels": 152,
+  "bounds_label": [
+   [
+    -4.6633819,
+    137.4038806
+   ],
+   [
+    -4.5528457,
+    137.4825313
+   ]
+  ],
+  "registration": {
+   "applied": true,
+   "move_east_deg": -0.0024545,
+   "move_north_deg": 0.003006,
+   "move_east_m": -145,
+   "move_north_m": 178,
+   "r_at_best_shift": 0.69,
+   "r_with_label_bounds": -0.02,
+   "points": 10492,
+   "parts": [
+    {
+     "part": "northern half",
+     "move_east_m": -176,
+     "move_north_m": 152,
+     "r": 0.65
+    },
+    {
+     "part": "southern half",
+     "move_east_m": -142,
+     "move_north_m": 181,
+     "r": 0.74
+    }
+   ],
+   "method": "Correlation of the scene's CRISM infrared albedo browse image (FRT0002037A_07_BRIRAJ_MTR3) with the NASA Mars Trek HiRISE mosaic (curiosity_hirise_mosaic), both band-passed on a 12 m grid, using ground within 1500 m of a rover stop. One shift for the whole scene; 'parts' shows how the best shift differs between the two halves, which is the error left after the move.",
+   "reference_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/curiosity_hirise_mosaic/ImageServer/exportImage"
+  }
+ },
+ {
+  "id": "themis_day_night_ir",
+  "title": "Night-time warmth (THEMIS day infrared with colourised night infrared)",
+  "file": "data/layers/themis_day_night_ir.png",
+  "bounds": [
+   [
+    -4.88,
+    137.32
+   ],
+   [
+    -4.55,
+    137.48
+   ]
+  ],
+  "kind": "rgb",
+  "units": null,
+  "value_min": null,
+  "value_max": null,
+  "legend_note": "Brightness is the daytime infrared mosaic (landforms); colour is the night-time infrared mosaic (relative night temperature), as the layer's title and abstract in the JMARS WMS capabilities say. The colour ramp itself is not documented by the service. Ground that stays warm at night is usually rock or cemented ground, ground that cools fast is usually loose sand or dust. Relative temperatures only, no kelvin values. Checked here against the thermal inertia layer: hue runs from red (high thermal inertia, warm at night) through yellow and green to blue (low, cold at night); correlation of hue angle with thermal inertia over the box is -0.88. Legend colours are nominal, not sampled.",
+  "resolution_m": 100,
+  "source": "ASU JMARS WMS, THEMIS Day IR with Colorized Night IR 100 m global mosaic v13.4 (thm_dirnir_100m_v13_4)",
+  "source_url": "https://ms-mars.mars.asu.edu/",
+  "credit": "NASA/JPL-Caltech/Arizona State University (Mars Odyssey THEMIS)",
+  "notes": "Requested at 388 x 800 pixels, about four times finer than the 100 m data, so the server's own resampling does the smoothing. One real pixel is about the size of a football field. Position: bounds are the requested box, not adjusted. A one-off check against the elevation grid suggests the daytime infrared mosaic sits roughly 200 m (two of its own pixels) north of the HiRISE base map; the night-time mosaic and the thermal inertia were not testable. Treat positions as good to a few hundred metres.",
+  "width": 388,
+  "height": 800,
+  "bytes": 47881,
+  "legend": [
+   {
+    "label": "Red: warmest at night: rock or cemented ground (mean 568 TIU here)",
+    "rgb": [
+     230,
+     50,
+     30
+    ]
+   },
+   {
+    "label": "Orange to yellow: warm (mean 441 TIU here)",
+    "rgb": [
+     240,
+     190,
+     40
+    ]
+   },
+   {
+    "label": "Green: cool: looser ground (mean 324 TIU here)",
+    "rgb": [
+     60,
+     200,
+     60
+    ]
+   },
+   {
+    "label": "Cyan to blue: coldest at night: loose sand or dust (mean 242 TIU here)",
+    "rgb": [
+     40,
+     110,
+     230
+    ]
+   }
+  ]
+ },
+ {
+  "id": "thermal_inertia",
+  "title": "Thermal inertia (THEMIS)",
+  "file": "data/layers/thermal_inertia.png",
+  "bounds": [
+   [
+    -4.88,
+    137.32
+   ],
+   [
+    -4.55,
+    137.48
+   ]
+  ],
+  "kind": "gray8",
+  "units": "TIU (J m^-2 K^-1 s^-1/2)",
+  "value_min": 210,
+  "value_max": 710,
+  "legend_note": "Pixel value p stands for 210 + p * (710 - 210) / 255 TIU. Low thermal inertia means loose, fine material such as sand or dust; high means rock or cemented ground. The app's loose-ground stipple uses the same data with limits at 300 and 400 TIU.",
+  "resolution_m": 100,
+  "source": "ASU JMARS WMS, THEMIS Quantitative Thermal Inertia 100 m Global Mosaic, 32-bit (thm_ti_100m_32bit)",
+  "source_url": "https://ms-mars.mars.asu.edu/",
+  "credit": "NASA/JPL-Caltech/Arizona State University (Mars Odyssey THEMIS)",
+  "notes": "Data in the box run from 210 to 707 TIU. Quantised in steps of 2.0 TIU (largest rounding error 0.98 TIU). 0 of 77600 cells have no data. Requested at 194 x 400 cells, about twice finer than the 100 m data. Plain 8-bit grey, no alpha. Read pixel values from a canvas with image smoothing off. Position: bounds are the requested box, not adjusted. A one-off check against the elevation grid suggests the daytime infrared mosaic sits roughly 200 m (two of its own pixels) north of the HiRISE base map; the night-time mosaic and the thermal inertia were not testable. Treat positions as good to a few hundred metres.",
+  "width": 194,
+  "height": 400,
+  "bytes": 18248,
+  "nodata_cells": 0
+ }
+]

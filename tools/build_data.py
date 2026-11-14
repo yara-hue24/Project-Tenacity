@@ -55,7 +55,7 @@ PHOTO_SOL_LAST = 4880   # Atacama drill site, first layered-sulfate bedrock past
 
 MARS_RADIUS_M = 3396190.0
 MIN_SPACING_M = 1.5  # keep one route point per this many metres; the feed is far denser
-UA = "tenacity-data-snapshot/1.0"
+UA = "data-snapshot/1.0"
 
 
 def fetch(url, cache_name, binary=False):

@@ -29,7 +29,7 @@ WEST, SOUTH, EAST, NORTH = 137.32, -4.88, 137.48, -4.55     # all of Curiosity's
 WIDTH, HEIGHT = 1552, 3200                                   # about 6 m per pixel
 TREK = "https://trek.nasa.gov/mars/trekarcgis/rest/services/Gale_DEM_SMG_1m/ImageServer/exportImage"
 JMARS = "https://ms-mars.mars.asu.edu/"
-UA = "tenacity-data-snapshot/1.0"
+UA = "data-snapshot/1.0"
 M_PER_DEG = 59274.7                                          # metres per degree of latitude on Mars
 
 SUIT_LIMIT_DEG = 20

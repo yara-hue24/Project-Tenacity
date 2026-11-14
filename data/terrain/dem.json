@@ -1,0 +1,126 @@
+{
+ "file": "dem.i16.gz",
+ "w": 1552,
+ "h": 3200,
+ "cell_m": 6.113,
+ "bounds": [
+  [
+   -4.88,
+   137.32
+  ],
+  [
+   -4.55,
+   137.48
+  ]
+ ],
+ "scale_m": 0.1,
+ "offset_m": -3500.0,
+ "encoding": "int16-le, horizontal delta, gzip",
+ "min_m": -4531.6,
+ "max_m": -2444.2,
+ "nodata_filled_fraction": 0.0,
+ "datum": "Heights in metres as served; the service does not state its vertical datum. Against the rover's localisation elevations (Mars geoid) the grid is not a constant shift: see stops_check.route_fifths. Use it for relative height (slope, climb, line of sight), not to restate absolute rover elevations.",
+ "source": "NASA Mars Trek, Gale_DEM_SMG_1m (MRO HiRISE 1 m elevation model), raw float32 heights resampled by the server (bilinear) to 1552 x 3200 cells",
+ "source_url": "https://trek.nasa.gov/mars/trekarcgis/rest/services/Gale_DEM_SMG_1m/ImageServer/exportImage",
+ "bytes_gz": 3432402,
+ "check": [
+  {
+   "row": 0,
+   "col": 0,
+   "elev_m": -4469.6
+  },
+  {
+   "row": 0,
+   "col": 1551,
+   "elev_m": -4524.6
+  },
+  {
+   "row": 3199,
+   "col": 0,
+   "elev_m": -3499.8
+  },
+  {
+   "row": 3199,
+   "col": 1551,
+   "elev_m": -2493.5
+  },
+  {
+   "row": 640,
+   "col": 517,
+   "elev_m": -4497.6
+  },
+  {
+   "row": 1280,
+   "col": 1034,
+   "elev_m": -4327.3
+  },
+  {
+   "row": 1920,
+   "col": 388,
+   "elev_m": -4103.3
+  },
+  {
+   "row": 2560,
+   "col": 1164,
+   "elev_m": -3239.2
+  }
+ ],
+ "cell_deg": [
+  0.000103125,
+  0.000103093
+ ],
+ "m_per_deg": 59274.7,
+ "layout": "row-major; row 0 = north edge, col 0 = west edge; cell centres at half-cell offsets inside bounds",
+ "decode": "gunzip; int16 little-endian; first value of a row adds to the first value of the row above (0 above row 0), every other value adds to the value on its left, wrapping in int16; elev_m = q * scale_m + offset_m",
+ "round_trip_max_error_m": 0.05,
+ "stops_check": {
+  "meaning": "this grid minus the rover's localisation elevation, metres (grid interpolated between cell centres)",
+  "sample_stops": 20,
+  "sample_median_m": 9.09,
+  "sample_min_m": -5.96,
+  "sample_max_m": 19.48,
+  "all_stops": 1388,
+  "all_median_m": 10.08,
+  "all_p05_m": -3.07,
+  "all_p95_m": 19.51,
+  "route_fifths": [
+   {
+    "sols": [
+     3,
+     957
+    ],
+    "median_m": -2.19
+   },
+   {
+    "sols": [
+     958,
+     1789
+    ],
+    "median_m": 0.41
+   },
+   {
+    "sols": [
+     1793,
+     3049
+    ],
+    "median_m": 10.31
+   },
+   {
+    "sols": [
+     3052,
+     4057
+    ],
+    "median_m": 14.0
+   },
+   {
+    "sols": [
+     4060,
+     5070
+    ],
+    "median_m": 18.16
+   }
+  ]
+ },
+ "credit": "NASA/JPL-Caltech/University of Arizona/USGS (MRO HiRISE), served by NASA Mars Trek",
+ "notes": []
+}
