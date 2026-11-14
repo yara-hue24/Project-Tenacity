@@ -669,7 +669,7 @@ function renderConsole() {
 function renderStatus() {
   const bits = [
     S.grid ? `Elevation: HiRISE 1 m model on a ${S.grid.w} × ${S.grid.h} grid, ${S.gridMeta.cell_m.toFixed(1)} m cells` : 'Elevation grid: loading',
-    'Latitude planetocentric, longitude east, heights above the Mars areoid',
+    'Latitude planetocentric, longitude east; grid heights as served by NASA Mars Trek (datum not stated)',
     `Data snapshot ${S.site.meta.snapshot_utc}`,
   ];
   $('#status-text').textContent = bits.join(' · ');
