@@ -7,6 +7,7 @@ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- loading screen ----------
 
+const LOAD_MIN_MS = 2100;
 const steps = [];
 export function loadStep(id, label) {
   steps.push({ id, label, state: 'wait' });
@@ -27,8 +28,13 @@ function paintLoad() {
 export function loadFinish() {
   const el = $('#loading');
   if (!el) return;
-  el.classList.add('done');
-  setTimeout(() => el.remove(), 450);
+  // The word on the loading screen takes about 1.5 s to draw; let it finish before the screen goes.
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = still ? 0 : Math.max(0, LOAD_MIN_MS - performance.now());
+  setTimeout(() => {
+    el.classList.add('done');
+    setTimeout(() => el.remove(), 450);
+  }, wait);
 }
 
 // ---------- settings and workspace state ----------

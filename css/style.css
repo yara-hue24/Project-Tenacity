@@ -75,8 +75,11 @@ sub { font-size: 0.75em; }
 #loading { position: fixed; inset: 0; z-index: 5000; background: #121212; display: grid; place-items: center; transition: opacity 0.35s; }
 #loading.done { opacity: 0; pointer-events: none; }
 .load-box { width: min(420px, 86vw); text-align: center; }
-.load-mark { width: 64px; height: 64px; }
-#loading h1 { font-size: 26px; letter-spacing: 0.32em; font-weight: 600; color: var(--strong); margin: 10px 0 2px 0.32em; }
+#loading h1 { margin: 0 0 8px; line-height: 0; }
+/* The word is drawn stroke by stroke; each path carries its own start time and duration. */
+.load-word { width: min(300px, 72vw); height: auto; overflow: visible; }
+.load-word path { fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 2; stroke-dashoffset: 1.08; animation: load-draw var(--d) cubic-bezier(0.45, 0, 0.3, 1) var(--t) forwards; }
+@keyframes load-draw { to { stroke-dashoffset: 0; } }
 .load-sub { color: var(--label); margin-bottom: 22px; }
 .load-bar { height: 4px; background: #2a2a2a; border-radius: 2px; overflow: hidden; }
 .load-bar i { display: block; height: 100%; width: 4%; background: var(--accent); transition: width 0.3s; }
@@ -491,4 +494,5 @@ button.rule:hover { background: #303030; }
 @media (prefers-reduced-motion: reduce) {
   .tour-box, .hint-ring, .crew-pulse { animation: none; }
   #loading, .load-bar i { transition: none; }
+  .load-word path { animation: none; stroke-dashoffset: 0; }
 }

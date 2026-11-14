@@ -15,7 +15,7 @@ Sketch a walk at Gale Crater, simulate it before it happens, and check it agains
 
 [**Open the tool**](https://yara-hue24.github.io/Project-Tenacity/) &nbsp;·&nbsp;
 [Demo slides](docs/Tenacity-demo-slides.pdf) &nbsp;·&nbsp;
-[Project description](docs/Tenacity-project-description.pdf) &nbsp;·&nbsp;
+[Project paper](docs/Tenacity-project-description.pdf) &nbsp;·&nbsp;
 [Flight rules](#flight-rules) &nbsp;·&nbsp;
 [Layers](#layers) &nbsp;·&nbsp;
 [Known limits](#known-limits)
@@ -44,6 +44,7 @@ Built by team **YA RULES** for the NASA Space Apps Challenge 2026, challenge "In
 
 - [Who it is for](#who-it-is-for)
 - [The idea](#the-idea)
+- [In motion](#in-motion)
 - [Screenshots](#screenshots)
 - [What you can do](#what-you-can-do)
 - [Flight rules](#flight-rules)
@@ -91,6 +92,31 @@ The comparison below is ours, drawn from JPL's description of the suite and from
 | SSim: predicts what a sequence will do before it is sent | Walk simulation: time, oxygen, CO₂, cooling water, battery, walk-home time |
 | HyperDrive: terrain views, several clocks, playback | Terrain layers, a clock strip (UTC, Mars mean and true solar time, elapsed time), playback |
 | ROCS: time, shadow, path-planning and terrain services | Mars time, Sun position, cast shadow, line of sight, path finding, in the browser |
+
+## In motion
+
+Recorded from the running tool.
+
+**Sketch, simulate, validate.** One click adds a station. The terrain engine finds a path around ground that is too steep, the walk is simulated again, and the flight rules are re-checked. Opening the leg shows why that path was chosen.
+
+<img src="screenshots/live-sketch-simulate-validate.gif" alt="Adding a station in Sketch mode: a path is found, the simulation and flight rules update" width="100%">
+
+**Playback on the Mars clock.** The crew marker walks the plan, the sequence table follows, and the clocks run.
+
+<img src="screenshots/live-playback.gif" alt="Playing the plan back on the Mars clock" width="100%">
+
+**Visualize path.** A 3D flyover of the real terrain, with Curiosity's own photo of a station on arrival.
+
+<img src="screenshots/live-3d-flyover.gif" alt="3D flyover of the route over HiRISE terrain" width="100%">
+
+**Guided tour.** A blinking box points at each part of the screen in turn.
+
+<img src="screenshots/live-guided-tour.gif" alt="The guided tour stepping through the interface" width="100%">
+
+<div align="center">
+<img src="screenshots/live-loading.gif" alt="Loading screen: the word Tenacity is drawn stroke by stroke" width="60%"><br>
+<sub>The loading screen.</sub>
+</div>
 
 ## Screenshots
 
@@ -238,6 +264,8 @@ cd tools && python3 build_contours.py && python3 build_terrain.py && python3 bui
 | `data/photos/` | One Curiosity Navcam frame for each boxwork stop; other stops load theirs from NASA |
 | `icons/`, `favicon.ico`, `site.webmanifest` | The tool's icon (refuge, planned route, station) as SVG and PNG, and the web app manifest |
 | `tools/` | Scripts that rebuild every data file from NASA's public services |
+| `docs/` | Demo slides and the project paper (PDF), with their sources in `docs/src/` |
+| `screenshots/` | Screenshots and recordings of the running tool |
 | `vendor/` | Leaflet 1.9.4 (BSD-2-Clause); Inter and DM Mono (SIL Open Font License) |
 
 </details>
@@ -274,7 +302,16 @@ cd tools && python3 build_contours.py && python3 build_terrain.py && python3 bui
 
 ## Use of AI
 
-Parts of this project's code and background research were produced with an AI coding assistant (Claude, by Anthropic). The project submission form describes how it was used.
+The team chose the challenge, set the concept (a rover-planner-style tool for a crew on foot), the requirements and the design direction, and reviewed and tested the result.
+
+Research was done in two ways:
+
+- **By hand.** The team found and read primary sources itself, among them JPL's description of the RSVP rover planning tools, NASA's crew-interface material, NASA's map of Curiosity's proposed path up Mount Sharp, NASA Mars Trek, the USGS geologic map of Mars and the rover image archives.
+- **With AI tools.** The team used **Perplexity** (an AI search assistant) to locate and cross-check sources, and **Claude** (an AI coding assistant by Anthropic) for further background research.
+
+Most of the program code and the scripts that build the data files were written with Claude under the team's direction, and an AI-run adversarial review was used to find defects, which were then fixed. The project documents were drafted with the assistant and checked by the team.
+
+No AI-generated images, video or audio are part of the project: every picture is a screenshot or recording of the working tool, or NASA imagery inside it.
 
 ## Licence and credits
 

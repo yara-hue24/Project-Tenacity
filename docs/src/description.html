@@ -1,157 +1,323 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Project Tenacity · project description</title>
+<html lang="en"><head><meta charset="utf-8"><title>Project Tenacity: a sketch, simulate and validate planner for walks on Mars</title>
 <style>
-@font-face { font-family: "Inter"; src: url("../../vendor/fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
-@page { size: A4; margin: 16mm 16mm 18mm; }
+@page { size: A4; margin: 17mm 16mm 18mm; }
 * { box-sizing: border-box; }
-body { font: 10.4pt/1.45 "Segoe UI", "Inter", system-ui, sans-serif; color: #151515; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-h1 { font-size: 26pt; letter-spacing: 0.02em; margin: 0 0 2mm; }
-h2 { font-size: 14pt; margin: 7mm 0 2mm; padding-bottom: 1mm; border-bottom: 0.5mm solid #151515; break-after: avoid; }
-h3 { font-size: 11pt; margin: 4mm 0 1mm; break-after: avoid; }
-p { margin: 0 0 2.2mm; }
-ul, ol { margin: 0 0 2.2mm; padding-left: 5mm; }
-li { margin-bottom: 1mm; }
-a { color: #0b4fa8; text-decoration: none; word-break: break-all; }
-.sub { font-size: 12pt; color: #333; margin-bottom: 4mm; }
-.meta { display: grid; grid-template-columns: 34mm 1fr; gap: 1mm 4mm; margin: 3mm 0 4mm; padding: 3mm 4mm; background: #f1f1f1; border-left: 1.2mm solid #c400b8; }
-.meta b { font-weight: 600; }
-table { border-collapse: collapse; width: 100%; margin: 1mm 0 3mm; font-size: 9.2pt; }
-th { text-align: left; background: #e9e9e9; padding: 1.4mm 2mm; border: 0.2mm solid #999; }
-td { padding: 1.4mm 2mm; border: 0.2mm solid #bbb; vertical-align: top; }
-td:first-child { width: 30%; font-weight: 600; }
-figure { margin: 3mm 0; break-inside: avoid; }
-figure img { width: 100%; display: block; border: 0.3mm solid #555; }
-figcaption { font-size: 8.6pt; color: #444; margin-top: 1mm; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font: 9.6pt/1.32 "Latin Modern Roman", "LM Roman 10", "Times New Roman", Times, serif; color: #000; margin: 0; text-align: justify; hyphens: auto; }
+a { color: #0b3d91; text-decoration: none; }
+.head { text-align: center; margin-bottom: 5mm; }
+h1 { font-size: 17.5pt; line-height: 1.18; font-weight: 700; margin: 0 0 3.5mm; text-align: center; hyphens: none; }
+.authors { font-size: 11.5pt; margin: 0 0 1mm; }
+.affil { font-size: 9.4pt; font-style: italic; margin: 0 0 0.6mm; }
+.links { font-size: 8.6pt; margin: 2mm 0 0; }
+.abstract { margin: 0 9mm 4mm; font-size: 9.2pt; }
+.abstract b.t { display: block; text-align: center; font-size: 10pt; margin-bottom: 1mm; }
+.kw { margin: 2mm 0 0; }
+.cols { column-count: 2; column-gap: 7mm; }
+h2 { font-size: 10.6pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin: 4.2mm 0 1.4mm; text-align: left; break-after: avoid; hyphens: none; }
+h3 { font-size: 9.8pt; font-weight: 700; font-style: italic; margin: 2.6mm 0 0.8mm; text-align: left; break-after: avoid; hyphens: none; }
+/* Nothing is cut in two by a column or page edge: a paragraph, list item, equation, table or figure moves whole. */
+p { margin: 0 0 1.6mm; text-indent: 0; break-inside: avoid; }
+li, .eq, table, tr, figure, .abstract { break-inside: avoid; }
+/* Sections that would otherwise be cut by a page edge start on a new page. */
+.cols.np { break-before: page; }
+ul, ol.refs { break-inside: avoid-page; }
+ul, ol { margin: 0 0 1.6mm; padding-left: 4.5mm; }
+li { margin-bottom: 0.6mm; }
+.wide { column-span: all; margin: 3mm 0 3.5mm; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; font-size: 8.4pt; line-height: 1.24; text-align: left; hyphens: none; }
+table caption, .cap { caption-side: top; font-size: 8.6pt; text-align: left; margin-bottom: 1.2mm; padding-bottom: 1mm; }
+table caption b, .cap b, figcaption b { font-weight: 700; }
+thead th { border-top: 0.35mm solid #000; border-bottom: 0.2mm solid #000; padding: 1mm 1.6mm; font-weight: 700; vertical-align: bottom; }
+td { padding: 0.8mm 1.6mm; vertical-align: top; }
+tbody tr:last-child td { border-bottom: 0.35mm solid #000; }
+td.n, th.n { text-align: right; white-space: nowrap; }
+figure { margin: 2.5mm 0 3mm; break-inside: avoid; }
+figure img { width: 100%; display: block; border: 0.2mm solid #000; }
+figure svg { width: 100%; display: block; }
+figcaption { font-size: 8.6pt; margin-top: 1.2mm; text-align: left; hyphens: none; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
-.box { border: 0.3mm solid #999; padding: 2.5mm 3.5mm; margin: 2mm 0 3mm; break-inside: avoid; }
-.tag { font-size: 8pt; border: 0.25mm solid #555; padding: 0 1.2mm; letter-spacing: 0.04em; white-space: nowrap; }
-.go { background: #1f9d55; color: #fff; font-weight: 700; padding: 0 1.5mm; }
-.nogo { background: #b3001b; color: #fff; font-weight: 700; padding: 0 1.5mm; }
-.small { font-size: 8.8pt; color: #333; }
-.pb { break-before: page; }
+.eq { display: grid; grid-template-columns: 1fr auto; align-items: center; margin: 1.6mm 0 1.8mm; text-align: left; hyphens: none; }
+.eq > span:first-child { padding-left: 3mm; }
+.eq > span:last-child { padding-left: 2mm; }
+i.v, .eq i { font-style: italic; }
+.pw { border-collapse: collapse; width: auto; font-size: 8.8pt; display: inline-table; vertical-align: middle; border-left: 0.3mm solid #000; margin-left: 1mm; }
+.pw td { padding: 0 1.5mm 0 1.5mm; border: 0 !important; white-space: nowrap; }
+.tag { font-size: 7.4pt; letter-spacing: 0.03em; white-space: nowrap; font-family: "Latin Modern Mono", "LM Mono 10", monospace; }
+.refs { font-size: 8.3pt; line-height: 1.25; padding-left: 5.5mm; text-align: left; hyphens: none; }
+.refs li { margin-bottom: 0.8mm; overflow-wrap: anywhere; }
+.small { font-size: 8.4pt; }
 </style></head><body>
 
-<h1>PROJECT TENACITY</h1>
-<p class="sub">An EVA planner for walking on Mars: sketch the walk, simulate it, validate it, before the airlock opens.</p>
-
-<div class="meta">
-  <b>Team</b><span>{{TEAM}}</span>
-  <b>Members</b><span>{{MEMBERS}}</span>
-  <b>Event</b><span>NASA Space Apps Challenge 2026, Cairo</span>
-  <b>Challenge</b><span>Interplanetary Survival Guide: Martian Map</span>
-  <b>Project (live)</b><span><a href="https://yara-hue24.github.io/Project-Tenacity/">https://yara-hue24.github.io/Project-Tenacity/</a></span>
-  <b>Demo (7 slides)</b><span><a href="https://yara-hue24.github.io/Project-Tenacity/docs/Tenacity-demo-slides.pdf">https://yara-hue24.github.io/Project-Tenacity/docs/Tenacity-demo-slides.pdf</a></span>
-  <b>Source code</b><span><a href="https://github.com/yara-hue24/Project-Tenacity">https://github.com/yara-hue24/Project-Tenacity</a> (MIT licence)</span>
+<div class="head">
+  <h1>Project Tenacity: A Sketch, Simulate and Validate Planner for Extravehicular Walks on Mars, Modelled on Rover Drive Planning</h1>
+  <p class="authors">{{MEMBERS}}</p>
+  <p class="affil">Team {{TEAM}}, NASA Space Apps Challenge 2026, Cairo. Challenge: Interplanetary Survival Guide: Martian Map</p>
+  <p class="links">Live tool: <a href="https://yara-hue24.github.io/Project-Tenacity/">yara-hue24.github.io/Project-Tenacity</a> &nbsp;·&nbsp; Source code (MIT): <a href="https://github.com/yara-hue24/Project-Tenacity">github.com/yara-hue24/Project-Tenacity</a> &nbsp;·&nbsp; <a href="https://yara-hue24.github.io/Project-Tenacity/docs/Tenacity-demo-slides.pdf">Demo slides</a></p>
 </div>
 
-<h2>1. High-level summary</h2>
-<p>Project Tenacity is a browser tool for planning a walk on Mars before taking it. It borrows the way NASA's rover drivers work at JPL (sketch a drive, simulate it, validate it against rules) and gives the same loop to astronauts on foot at Gale Crater.</p>
-<p>The crew lays out a walk on real orbital imagery, or lets the tool find the easiest path over the terrain. Tenacity then simulates the walk step by step: time on every slope, oxygen, cooling water and battery, and how long it would take to get back to the refuge at any moment. Fifteen flight rules give one clear answer, <span class="go">GO</span> or <span class="nogo">NO-GO</span>, name the rule that decides, and show where on the map it bites.</p>
-<p>More than 25 layers of NASA data (terrain, slope, shadow, minerals, subsurface water, rock chemistry, solar-storm forecasts and Curiosity's own photos of each stop) feed the same rules, so the map and the plan cannot disagree. A 3D flyover shows the ground before the crew walks it. Every number is labelled as measured, a NASA value, derived or assumed.</p>
-<p><b>Why it matters.</b> On Mars the limit of a walk is not distance. It is getting back to shelter in time: a suit's backup life support lasts about an hour. A map that only shows where things are cannot answer "can we go, and get home?". Tenacity answers exactly that, and shows its reasoning.</p>
+<div class="abstract">
+  <b class="t">Abstract</b>
+  Rover drives on Mars are never sent unchecked: planners at the Jet Propulsion Laboratory sketch each drive on the terrain, simulate it and validate it against rules before uplink. No equivalent open tool exists for a crew on foot, for whom the binding constraint is not distance but the time needed to regain shelter after a suit failure. We present Tenacity, a browser-based planner that applies the sketch, simulate and validate loop to extravehicular walks at Gale crater. A walk is laid out on orbital imagery or found by a least-time path search over a 6 m elevation grid derived from the HiRISE 1 m model. A step-by-step simulation predicts duration, metabolic effort, oxygen, carbon dioxide, cooling water and battery use, and the emergency return time from every point of the route. Fifteen flight rules, each traced to a NASA document or declared as our own, yield a single verdict (GO, NO-GO, PROVISIONAL or NOT EVALUATED) and name the rule that decides. More than 25 data layers feed the same rules that are drawn on the map. Every constant carries a provenance tag. Two reference walks are reported: one accepted with a 47 minute margin, one rejected because the farthest point lies 62 minutes from the refuge. The tool is intended for astronauts and mission operations personnel, and states its limits explicitly.
+  <p class="kw"><b>Keywords:</b> extravehicular activity; traverse planning; Mars; Gale crater; flight rules; terrain analysis; least-time path; mission operations software.</p>
+</div>
 
-<figure><img src="../img/planner.jpg" alt="The Tenacity planner"><figcaption>The working tool. Left: the plan (INCONS, legs, stations). Centre: the map with the route, no-go ground hatched, the return limit in red and the crew marker. Right: simulation, flight rules and the probe. Below: Mars clocks, playback and the command sequence.</figcaption></figure>
+<div class="cols">
 
-<h2>2. How to open and use it (for judges)</h2>
-<ol>
-  <li>Open <a href="https://yara-hue24.github.io/Project-Tenacity/">the live link</a> on a desktop or laptop browser (Chrome, Edge or Firefox). No login or installation.</li>
-  <li>On the first visit a welcome box offers a <b>two-minute guided tour</b>: a yellow blinking box points at each part of the screen. It can be replayed from Help ▸ Guided tour.</li>
-  <li>The ready-made walk "Boxwork ridges" loads by itself and shows <span class="go">GO</span>. Choose "Dingo Gap to Pahrump Hills" in the Plan list to see a walk the tool rejects.</li>
-  <li>Switch <b>Mode</b> to Sketch and click the map: a station is added and a path is found over the terrain. Open the new leg in the Activity list to read "Why this path".</li>
-  <li>Press <b>Visualize path</b> for the 3D flyover. Click anywhere on the map to probe every layer at that point.</li>
-</ol>
-<p class="small">The map imagery and some photos load from NASA's public servers, so an internet connection is needed. The terrain engine takes a few seconds to load; until then the verdict reads PROVISIONAL.</p>
+<h2>1. Introduction</h2>
+<p>A map that shows where things are cannot answer the question a surface crew asks before opening the airlock: can we go, and can we get home? On Mars the limit of a walk is set by the suit. The backup life support of NASA's exploration suit is designed to bring a crew member back to a safe haven within 60 minutes [4], and Artemis III bounds walking distance in the same way [5]. A route that looks short in plan view may be far in time once slope, loose ground and the detours around steep terrain are counted.</p>
+<p>Robotic missions already solve the corresponding problem. Every drive of Curiosity and Perseverance is planned in the Rover Sequencing and Visualization Program (RSVP), in which drive legs are sketched on a terrain model, simulated, and checked by flight rules before the sequence is sent [1, 2]. Tenacity transfers that working method to a walking crew.</p>
+<p><b>Intended users.</b> Tenacity is a professional planning tool, not a public outreach product. It is designed for two groups: astronauts, who plan the walk and then follow it, and mission operations personnel (flight controllers, EVA officers and planners), who must clear the plan before egress. This choice explains the dense, workstation-style interface and the use of flight-rule and alert conventions.</p>
+<p><b>Contributions.</b> (i) A plan model and step-by-step walk simulation for suited traverses, with all constants sourced and tagged; (ii) a terrain engine running entirely in the browser that computes slope, cast shadow, line of sight, an emergency walk-home time field and least-time paths; (iii) a set of fifteen flight rules with an explicit treatment of missing or stale data; (iv) an integration of more than 25 NASA and partner data layers in which the layers drawn on the map are the same data the rules evaluate; and (v) an explanation view that shows why a path was chosen.</p>
 
-<h2>3. Project details</h2>
-<h3>What it does</h3>
-<ol>
-  <li><b>Sketch.</b> Load a ready-made walk or click the map to add stations anywhere. Each leg can follow ground a rover has already driven, go in a straight line, or take the easiest path the terrain engine finds. Keep-out zones can be marked; paths go around them.</li>
-  <li><b>Simulate.</b> The walk is simulated before it happens: pace and effort on every slope, oxygen, carbon dioxide, cooling water and battery, and the walk-home time from every point of the route.</li>
-  <li><b>Validate.</b> Fifteen flight rules are checked along the whole walk. A rule whose data are missing or too old is shown as "not evaluated", never as a pass.</li>
-  <li><b>Understand.</b> Click any point to read every layer there. Ask why a path was chosen: ground that cannot be crossed is red, slow ground yellow, and the rejected straight line is drawn. Fly the route in 3D over real terrain and imagery, with Curiosity's own photograph of each station.</li>
-</ol>
+<h2>2. Background and Related Work</h2>
+<p><b>Rover drive planning.</b> RSVP consists of cooperating tools: MobSketch for sketching drive legs, RoSE for editing the command sequence, SSim for simulation, HyperDrive for terrain visualisation and playback, and ROCS for time, shadow and path services [1, 2]. Table 1 gives the correspondence we adopted. The comparison is ours, drawn from JPL's public description of the suite and from figures in Rankin et al. [2].</p>
+<p><b>Traverse planning for crews.</b> SEXTANT, developed at MIT with NASA, computes least-cost traverses for suited explorers from an elevation model, using a walking-speed function of slope credited to Marquez and the load-carriage model of Santee et al. for metabolic cost [3, 10, 11]. Tenacity re-implements both functions and scales them to NASA design values (Section 4).</p>
+<p><b>Suit and life-support constraints.</b> Capacities and rates are taken from the description of the xEMU portable life support system [4], the Artemis III surface requirements [5], NASA's Life Support Baseline Values and Assumptions Document [6] and the Apollo 15 planning memorandum on EVA capability [7].</p>
+<p><b>Crew displays.</b> Alert classes and colours follow NASA-STD-3001 Volume 2 [8]; layout guidance was taken from NASA's crew-interface reference material [9].</p>
 
+<div class="wide">
+<table>
+  <caption><b>Table 1.</b> Components of JPL's rover planning suite and their counterparts in Tenacity.</caption>
+  <thead><tr><th style="width:36%">Rover planning (RSVP)</th><th>Tenacity, for a walk</th></tr></thead>
+  <tbody>
+  <tr><td>MobSketch: drive legs drawn on the map, activity list</td><td>Legs and stations on the map, with an activity list</td></tr>
+  <tr><td>RoSE: command sequence table and status console</td><td>Sequence table (one row per walk, work or return step) and a console</td></tr>
+  <tr><td>SSim: predicts the effect of a sequence before uplink</td><td>Walk simulation: time, oxygen, CO<sub>2</sub>, cooling water, battery, walk-home time</td></tr>
+  <tr><td>HyperDrive: terrain views, clocks, playback</td><td>Terrain layers, clock strip (UTC, Mars mean and true solar time, elapsed time), playback, 3D flyover</td></tr>
+  <tr><td>ROCS: time, shadow, path and terrain services</td><td>Mars time, Sun position, cast shadow, line of sight and path finding, computed in the browser</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>3. Data</h2>
+<p>The study area is the part of Gale crater explored by Curiosity, from the landing site to the boxwork terrain on lower Mount Sharp. Table 2 lists the datasets. The rover's own track and stop positions define the "proven ground" of the planner: legs that follow it are drawn solid, legs on ground known only from orbit are dashed and flagged by rule FR-05.</p>
+<p>The HiRISE elevation model was resampled to 1552 × 3200 cells of about 6.1 m and stored as 16-bit integers with 0.1 m resolution (5 million cells, delivered compressed). CRISM mineral-indicator maps were shifted by 150 to 250 m to register them to the base map; a residual error of 30 to 60 m remains. In-situ measurements (CheMin, APXS, ChemCam, DAN) are attached to the rover stop at which they were acquired. All derived files are produced by scripts in the repository from public services and can be regenerated.</p>
+
+<div class="wide">
+<table>
+  <caption><b>Table 2.</b> Datasets used. Resolution is that of the product as used in the tool.</caption>
+  <thead><tr><th style="width:29%">Dataset</th><th style="width:15%">Resolution or size</th><th>Use in Tenacity</th><th style="width:8%">Ref.</th></tr></thead>
+  <tbody>
+  <tr><td>Curiosity location map (NASA/JPL-Caltech): track and stops</td><td>38.8 km; 1,388 stops, sols 3 to 5070</td><td>Proven ground; station positions; base-map tiles (HiRISE 25 cm, CTX 6 m)</td><td>[13]</td></tr>
+  <tr><td>MRO HiRISE elevation model of Gale (NASA Mars Trek)</td><td>1 m, resampled to 6.1 m</td><td>Slope, roughness, relief lines, shadow, line of sight, walk-home time, path finding, 3D terrain</td><td>[14]</td></tr>
+  <tr><td>Curiosity raw images (Navcam)</td><td>One frame per stop</td><td>View on arrival at a station</td><td>[13]</td></tr>
+  <tr><td>CheMin, APXS, ChemCam (NASA PDS Geosciences Node)</td><td>48 samples; 1,784 spots; 4,393 targets</td><td>Mineralogy and chemistry at the point probed</td><td>[15]</td></tr>
+  <tr><td>MRO CRISM mineral-indicator maps (NASA PDS)</td><td>18 m</td><td>Hydrated minerals, clays, iron minerals from orbit</td><td>[16]</td></tr>
+  <tr><td>Mars Odyssey THEMIS thermal inertia and night infrared (ASU JMARS)</td><td>100 m</td><td>Loose-ground indicator (rule FR-11)</td><td>[17]</td></tr>
+  <tr><td>DAN subsurface water along the traverse (Roscosmos instrument)</td><td>To sol 3333</td><td>Water-equivalent hydrogen at the point probed</td><td>[18]</td></tr>
+  <tr><td>NASA DONKI, WSA-Enlil simulations</td><td>Event forecasts</td><td>Solar eruptions forecast to reach Mars (rule FR-10)</td><td>[12]</td></tr>
+  <tr><td>Curiosity's proposed path up Mount Sharp; USGS SIM 3292</td><td>13 regions; 1:20,000,000</td><td>Named science regions; global geologic unit</td><td>[19, 20]</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>4. Methods</h2>
+<h3>4.1 Plan model</h3>
+<p>A plan consists of a refuge (a habitat or a pressurised rover that can be re-parked), an ordered list of stations, and the legs between them. Each leg is walked in one of three ways: along the rover's track, in a straight line, or on the least-time path found by the terrain engine under the slope limit. Each station carries a work duration and a work intensity. The plan is expanded into a list of steps (walk, work, return) that the simulation consumes; the same list is shown to the user as a sequence table.</p>
+
+<h3>4.2 Walking speed</h3>
+<p>Speed over the map is a function of the slope <i>s</i> (degrees, positive uphill) along the direction of travel. We use the piecewise-linear lunar curve implemented in SEXTANT [3, 10]:</p>
+<div class="eq"><span><i>v</i><sub>0</sub>(<i>s</i>) =
+  <table class="pw"><tbody>
+  <tr><td>0.05</td><td><i>s</i> ≤ −20</td></tr>
+  <tr><td>0.095 <i>s</i> + 1.95</td><td>−20 &lt; <i>s</i> ≤ −10</td></tr>
+  <tr><td>0.06 <i>s</i> + 1.6</td><td>−10 &lt; <i>s</i> ≤ 0</td></tr>
+  <tr><td>−0.2 <i>s</i> + 1.6</td><td>0 &lt; <i>s</i> ≤ 6</td></tr>
+  <tr><td>max(0.05, −0.039 <i>s</i> + 0.634)</td><td>6 &lt; <i>s</i> ≤ 15</td></tr>
+  <tr><td>0.05</td><td><i>s</i> &gt; 15</td></tr>
+  </tbody></table></span><span>(1)</span></div>
+<p>with <i>v</i><sub>0</sub> in m/s. The curve gives 1.6 m/s on level ground. It is scaled so that the level speed equals the planned speed <i>V</i>: <i>v</i>(<i>s</i>) = <i>v</i><sub>0</sub>(<i>s</i>) · <i>V</i> / 1.6. The default <i>V</i> = 3.3 km/h is the Apollo 15 planning value for walking traverses [7]. Slope is measured over a 20 m baseline along the path. For the emergency return the same shape is scaled to the emergency pace.</p>
+
+<h3>4.3 Metabolic power</h3>
+<p>Metabolic power follows the load-carriage model of Santee et al. [11] as coded in SEXTANT, with total mass <i>m</i> (crew member 82 kg plus suit 121 kg), slope angle <i>α</i> and Mars gravity <i>g</i> = 3.71 m/s²:</p>
+<div class="eq"><span><i>P</i> = max{ <i>P</i><sub>min</sub>, <i>k</i> (3.28 <i>m</i> + 71.1)(0.661 <i>v</i> cos <i>α</i> + 0.115) + <i>C</i>(<i>α</i>) }</span><span>(2)</span></div>
+<p>where <i>C</i> = 3.5 <i>m g v</i> sin <i>α</i> uphill and <i>C</i> = 2.4 <i>m g v</i> sin <i>α</i> · 0.3<sup>|<i>α</i>|/7.65°</sup> downhill. The original model describes unsuited walking on Earth and returns about 530 W for a suited mass on level ground; the factor <i>k</i> rescales the level term so that level walking at <i>V</i> costs the xEMU design rate of 352 W [6]. Because the speed curve slows climbs strongly, the raw formula would make a climb cheaper than level walking; since Apollo crews recorded their highest rates on climbs, uphill power is floored at the level value. <i>P</i><sub>min</sub> = 144 W is the lowest suited rate on record [6]. The emergency return is charged at a flat 422 W [7]. Figure 1 shows both functions.</p>
+
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 250" font-family="Latin Modern Roman, LM Roman 10, Times New Roman, serif" font-size="12"><rect x="44.0" y="12" width="30.400000000000006" height="194" fill="#e6e6e6"/><rect x="317.6" y="12" width="30.399999999999977" height="194" fill="#e6e6e6"/><line x1="74.4" y1="12" x2="74.4" y2="206" stroke="#ccc" stroke-width="0.5"/><text x="74.4" y="220" text-anchor="middle">-20</text><line x1="135.2" y1="12" x2="135.2" y2="206" stroke="#ccc" stroke-width="0.5"/><text x="135.2" y="220" text-anchor="middle">-10</text><line x1="196.0" y1="12" x2="196.0" y2="206" stroke="#ccc" stroke-width="0.5"/><text x="196.0" y="220" text-anchor="middle">0</text><line x1="256.8" y1="12" x2="256.8" y2="206" stroke="#ccc" stroke-width="0.5"/><text x="256.8" y="220" text-anchor="middle">+10</text><line x1="317.6" y1="12" x2="317.6" y2="206" stroke="#ccc" stroke-width="0.5"/><text x="317.6" y="220" text-anchor="middle">+20</text><line x1="44" y1="206.0" x2="348" y2="206.0" stroke="#ccc" stroke-width="0.5"/><text x="39" y="209.0" text-anchor="end">0</text><line x1="44" y1="150.6" x2="348" y2="150.6" stroke="#ccc" stroke-width="0.5"/><text x="39" y="153.6" text-anchor="end">1</text><line x1="44" y1="95.1" x2="348" y2="95.1" stroke="#ccc" stroke-width="0.5"/><text x="39" y="98.1" text-anchor="end">2</text><line x1="44" y1="39.7" x2="348" y2="39.7" stroke="#ccc" stroke-width="0.5"/><text x="39" y="42.7" text-anchor="end">3</text><text x="353" y="209.0">0</text><text x="353" y="160.5">100</text><text x="353" y="112.0">200</text><text x="353" y="63.5">300</text><text x="353" y="15.0">400</text><rect x="44" y="12" width="304" height="194" fill="none" stroke="#000" stroke-width="0.8"/><polyline fill="none" stroke="#000" stroke-width="1.6" points="44.0,200.3 47.0,200.3 50.1,200.3 53.1,200.3 56.2,200.3 59.2,200.3 62.2,200.3 65.3,200.3 68.3,200.3 71.4,200.3 74.4,200.3 77.4,194.9 80.5,189.4 83.5,184.0 86.6,178.6 89.6,173.1 92.6,167.7 95.7,162.3 98.7,156.8 101.8,151.4 104.8,146.0 107.8,140.5 110.9,135.1 113.9,129.7 117.0,124.2 120.0,118.8 123.0,113.4 126.1,107.9 129.1,102.5 132.2,97.1 135.2,91.7 138.2,88.3 141.3,84.8 144.3,81.4 147.4,78.0 150.4,74.5 153.4,71.1 156.5,67.7 159.5,64.2 162.6,60.8 165.6,57.4 168.6,54.0 171.7,50.5 174.7,47.1 177.8,43.6 180.8,40.2 183.8,36.8 186.9,33.4 189.9,30.0 193.0,26.5 196.0,23.1 199.0,34.5 202.1,45.9 205.1,57.4 208.2,68.8 211.2,80.2 214.2,91.7 217.3,103.1 220.3,114.5 223.4,126.0 226.4,137.4 229.4,148.9 232.5,160.3 235.5,162.5 238.6,164.7 241.6,167.0 244.6,169.2 247.7,171.4 250.7,173.6 253.8,175.9 256.8,178.1 259.8,180.3 262.9,182.6 265.9,184.8 269.0,187.0 272.0,189.3 275.0,191.5 278.1,193.7 281.1,196.0 284.2,198.2 287.2,200.3 290.2,200.3 293.3,200.3 296.3,200.3 299.4,200.3 302.4,200.3 305.4,200.3 308.5,200.3 311.5,200.3 314.6,200.3 317.6,200.3 320.6,200.3 323.7,200.3 326.7,200.3 329.8,200.3 332.8,200.3 335.8,200.3 338.9,200.3 341.9,200.3 345.0,200.3 348.0,200.3"/><polyline fill="none" stroke="#000" stroke-width="1.2" stroke-dasharray="5 3" points="44.0,136.2 47.0,136.2 50.1,136.2 53.1,136.2 56.2,136.2 59.2,136.2 62.2,136.2 65.3,136.2 68.3,136.2 71.4,136.2 74.4,136.2 77.4,136.2 80.5,136.2 83.5,136.2 86.6,136.2 89.6,136.2 92.6,136.2 95.7,136.2 98.7,136.2 101.8,136.2 104.8,136.2 107.8,136.2 110.9,133.2 113.9,129.9 117.0,126.9 120.0,123.5 123.0,120.6 126.1,117.2 129.1,114.3 132.2,111.4 135.2,108.5 138.2,106.6 141.3,105.1 144.3,103.2 147.4,101.7 150.4,99.8 153.4,97.8 156.5,95.9 159.5,93.5 162.6,91.1 165.6,88.6 168.6,85.7 171.7,82.3 174.7,78.9 177.8,75.0 180.8,70.2 183.8,64.9 186.9,59.0 189.9,52.3 193.0,44.5 196.0,35.3 199.0,34.8 202.1,35.3 205.1,35.3 208.2,35.3 211.2,35.3 214.2,35.3 217.3,35.3 220.3,35.3 223.4,35.3 226.4,35.3 229.4,35.3 232.5,35.3 235.5,35.3 238.6,35.3 241.6,35.3 244.6,35.3 247.7,35.3 250.7,35.3 253.8,35.3 256.8,35.3 259.8,35.3 262.9,35.3 265.9,35.3 269.0,35.3 272.0,35.3 275.0,35.3 278.1,35.3 281.1,35.3 284.2,35.3 287.2,35.3 290.2,35.3 293.3,35.3 296.3,35.3 299.4,35.3 302.4,35.3 305.4,35.3 308.5,35.3 311.5,35.3 314.6,35.3 317.6,35.3 320.6,35.3 323.7,35.3 326.7,35.3 329.8,35.3 332.8,35.3 335.8,35.3 338.9,35.3 341.9,35.3 345.0,35.3 348.0,35.3"/><text x="196.0" y="244" text-anchor="middle">Slope along the path (degrees, positive uphill)</text><text transform="translate(12 109.0) rotate(-90)" text-anchor="middle">Speed (km/h), solid</text><text transform="translate(386 109.0) rotate(90)" text-anchor="middle">Metabolic power (W), dashed</text></svg>
+<figcaption><b>Figure 1.</b> Walking speed (solid) and metabolic power (dashed) against slope, as used by the simulation at the default planned speed of 3.3 km/h. Shaded bands lie beyond the 20° suit limit. Both curves are extrapolations to Mars and are tagged ASSUMED.</figcaption>
+</figure>
+
+<h3>4.4 Consumables</h3>
+<p>For metabolic power <i>P</i> (W), consumption rates are</p>
+<div class="eq"><span>
+  ṁ<sub>O₂</sub> = 2.56×10<sup>−4</sup> <i>P</i> + 0.005 &nbsp;kg/h<br>
+  ṁ<sub>CO₂</sub> = 1.2375 · (2.56×10<sup>−4</sup> <i>P</i>) &nbsp;kg/h<br>
+  ṁ<sub>H₂O</sub> = (<i>P</i> + 92.9) / (2.45×10<sup>6</sup>) &nbsp;kg/s
+</span><span>(3)</span></div>
+<p>and the battery is drained at a constant 80 W. The oxygen coefficient is derived from 0.075 kg per crew-member-hour at 293 W, the constant term is suit leakage, the carbon dioxide factor is a respiratory quotient of 0.90 times the molar mass ratio, and cooling water is evaporated to reject metabolic heat plus 92.9 W of other loads [6]. At 352 W this gives 0.095 kg/h of oxygen and 0.65 kg/h of water. Starting quantities are 0.771 kg of oxygen, 3.856 kg of usable water and 756 Wh [4]. Table 3 lists the principal constants with their provenance tags.</p>
+
+<div class="wide">
+<table>
+  <caption><b>Table 3.</b> Principal constants of the simulation. Tags: NASA VALUE, taken from a NASA document; DERIVED, computed here from such values; ASSUMED, a choice of ours.</caption>
+  <thead><tr><th style="width:30%">Quantity</th><th style="width:14%">Value</th><th style="width:12%">Tag</th><th>Source and remark</th></tr></thead>
+  <tbody>
+  <tr><td>Usable oxygen at egress</td><td>0.771 kg</td><td class="tag">NASA VALUE</td><td>xEMU primary oxygen vessel, 1.7 lbm usable [4]</td></tr>
+  <tr><td>Usable cooling water</td><td>3.856 kg</td><td class="tag">DERIVED</td><td>8.5 lb of the 10 lb feedwater assembly, read from the xEMU schematic [4]</td></tr>
+  <tr><td>Battery energy; electrical load</td><td>756 Wh; 80 W</td><td class="tag">NASA VALUE; ASSUMED</td><td>xEMU primary battery [4]; no published power budget was found</td></tr>
+  <tr><td>Level walking: speed; power</td><td>3.3 km/h; 352 W</td><td class="tag">ASSUMED; NASA VALUE</td><td>Apollo 15 planning speed [7]; xEMU average design metabolic rate [6]</td></tr>
+  <tr><td>Emergency return: time; power</td><td>60 min; 422 W</td><td class="tag">NASA VALUE</td><td>xEMU auxiliary loop abort capability [4, 5]; Apollo walk-back rate with 20% pad [7]</td></tr>
+  <tr><td>Consumables reserve</td><td>30 min</td><td class="tag">NASA VALUE</td><td>Apollo 15 planning memorandum [7]</td></tr>
+  <tr><td>Slope limit; impassable slope</td><td>20°; 30°</td><td class="tag">NASA VALUE; ASSUMED</td><td>Artemis suit requirement "up, down, across a 20-degree slope" [5]; SEXTANT masks terrain above 35° [3]</td></tr>
+  <tr><td>Maximum duration</td><td>8 h</td><td class="tag">NASA VALUE</td><td>Suit requirement [5]</td></tr>
+  <tr><td>Slow-pace factor</td><td>1.375</td><td class="tag">DERIVED</td><td>Planned 3.3 km/h over the 2.4 km/h average of an Apollo walking traverse [22]</td></tr>
+  <tr><td>Work rates: light; moderate; heavy</td><td>144; 286; 530 W</td><td class="tag">NASA VALUE</td><td>Apollo surface minimum and average [6]; Mars PLSS sizing maximum [21]</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>4.5 Terrain engine</h3>
+<p>All terrain products are computed in the browser, in a web worker, from the elevation grid.</p>
+<p><i>Slope, roughness and shading.</i> Slope and aspect are obtained from central differences, which average over about 12 m. Roughness is the local spread of elevation. Hill shading and cast shadows are computed for the Sun's azimuth and elevation at the plan time; a cell is in cast shadow when it lies below the shadow edge thrown by ground up-sun of it.</p>
+<p><i>Line of sight.</i> A viewshed from the refuge assumes a 3 m antenna and a 1.8 m helmet height and lowers distant ground by <i>d</i>²/2<i>R</i> for planetary curvature.</p>
+<p><i>Time fields and paths.</i> Travel time is accumulated with Dijkstra's algorithm over the eight neighbours of each cell. A move covers the horizontal distance <i>d</i> between cell centres; its slope is that of the move itself, in the direction walked, so the cost is anisotropic: <i>t</i> = <i>d</i> / <i>v</i>(<i>s</i>). Cells steeper than the impassable slope, and cells inside keep-out zones drawn by the user, cannot be entered. Three products follow: (a) the least-time path of a leg; (b) the walk-home field, the time from every cell <i>to</i> the refuge at emergency pace; and (c) the 60 minute contour of that field, drawn on the map as the suit-failure return limit.</p>
+<p><i>Explanation.</i> For any leg found by the engine the tool reports the length of the straight line, the length of that line lying on ground over the limit, and the length, climb, drop and duration of the chosen path; it overlays impassable ground in red, slow ground in yellow and the rejected straight line (Figure 3, left).</p>
+
+<h3>4.6 Time and the Sun</h3>
+<p>Mars local mean and true solar time, areocentric solar longitude, and the Sun's azimuth and elevation at the refuge are computed with the Mars24 algorithm [23]. Sunrise and sunset assume a flat horizon.</p>
+
+<h3>4.7 Flight rules and verdict</h3>
+<p>Fifteen rules are evaluated along the whole walk (Table 4). Each returns one of five levels: pass, advisory, caution, warning, or <i>not evaluated</i>. The last is central to the design: a rule whose data are missing or older than their validity (for example a space-weather forecast older than 48 hours) is never counted as a pass.</p>
+<p>The verdict is NO-GO if any rule raises a warning. Otherwise it is PROVISIONAL while the terrain engine or forecast data are still loading, NOT EVALUATED if any of the three critical rules (FR-01 return time, FR-02 oxygen, FR-04 slope) could not be evaluated, and GO in the remaining case. The interface always shows the verdict, the margin, and the rule that limits it.</p>
+<p>FR-04 uses the larger of the slope along the path and the slope of the ground itself, so that a traverse across a steep face is caught. FR-14 repeats every timed rule with walking 1.375 times slower, and FR-15 flags walks that spend long on slopes where the speed model is at its weakest.</p>
+
+<div class="wide">
+<table>
+  <caption><b>Table 4.</b> Flight rules. Rules without a NASA basis are declared as our own.</caption>
+  <thead><tr><th style="width:8%">Rule</th><th style="width:50%">Condition checked</th><th>Basis</th></tr></thead>
+  <tbody>
+  <tr><td>FR-01</td><td>At every moment the refuge is within 60 min at emergency pace</td><td>xEMU emergency return capability [4]; Artemis III [5]</td></tr>
+  <tr><td>FR-02</td><td>Oxygen left covers the emergency walk home plus a 30 min reserve</td><td>Apollo 15 planning memorandum [7]</td></tr>
+  <tr><td>FR-03</td><td>Return before sunset, with the reserve</td><td>Mars24 for the season at the refuge [23]</td></tr>
+  <tr><td>FR-04</td><td>Slope within 20° up, down or across, at every point</td><td>Artemis suit requirement [5]; HiRISE elevation [14]</td></tr>
+  <tr><td>FR-05</td><td>Legs on ground not driven by a rover are flagged</td><td>Our rule</td></tr>
+  <tr><td>FR-06</td><td>Line of sight to the refuge</td><td>Computed from the elevation grid</td></tr>
+  <tr><td>FR-07</td><td>Duration no longer than 8 h</td><td>Suit requirement [5]</td></tr>
+  <tr><td>FR-08, 09</td><td>Battery and cooling water cover the walk home plus reserve</td><td>xEMU capacities [4]; battery load assumed</td></tr>
+  <tr><td>FR-10</td><td>No solar eruption forecast to reach Mars within 2 days; glancing impact is a caution; forecasts older than 48 h are not evaluated</td><td>NASA DONKI WSA-Enlil [12]</td></tr>
+  <tr><td>FR-11</td><td>Loose ground on the route</td><td>THEMIS thermal inertia [17]</td></tr>
+  <tr><td>FR-12</td><td>Route stays out of keep-out zones</td><td>Zones set by the crew</td></tr>
+  <tr><td>FR-13</td><td>At least two crew on the walk</td><td>NASA plans surface walks in pairs</td></tr>
+  <tr><td>FR-14</td><td>Timed rules still hold when walking is 1.375 times slower</td><td>Apollo traverse average [22]</td></tr>
+  <tr><td>FR-15</td><td>Flags long stretches where the modelled pace falls below 0.5 km/h</td><td>Our rule, on the model's own limits</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>4.8 Provenance</h3>
+<p>Every constant is stored with its value, unit, source and one of four tags: MEASURED, NASA VALUE, DERIVED or ASSUMED. The tags are shown in the interface next to the numbers they qualify and listed in full in a Sources tab, so that a reviewer can see at once which results rest on measurements and which on assumptions.</p>
+
+<h3>4.9 Interface</h3>
+<p>The interface is organised as a workstation (Figure 2): the plan as an activity list, the map, the simulation and rules, a clock strip with playback, and the sequence table with a console. Docks can be resized, folded, hidden and swapped; plans, notes and the history of changes persist in the browser. Alert colours have fixed meanings following NASA-STD-3001 [8] (red warning, yellow caution, blue advisory) and are never the only cue: each alert also carries a class letter. Routes are drawn as rover planners draw drives, with named legs, stations with an arrival circle and keep-out zones. A probe reads every layer at a clicked point, and a 3D flyover drapes HiRISE imagery on the elevation model and shows Curiosity's photograph of each station (Figure 3, right). A guided tour introduces the screen to new users.</p>
+
+<h3>4.10 Implementation and verification</h3>
+<p>Tenacity is a static web page written in HTML, CSS and JavaScript modules, with the Leaflet library for the 2D map and our own WebGL code for the 3D view. There is no server and no build step. The simulation, the Mars clock, the terrain engine and the 3D mathematics are covered by 113 automated tests. In addition, the tool and its data were subjected to an adversarial review written from the standpoint of mission operations personnel; the defects it found (among them cross-slope handling, stale forecast handling and an optimistic verdict while data were loading) were corrected before release.</p>
+
+<div class="wide">
+<figure><img src="../img/planner.jpg" alt="The Tenacity planner">
+<figcaption><b>Figure 2.</b> The planner with reference walk A. Left: the plan (initial conditions, legs, stations). Centre: the map with the route in magenta, ground over the slope limit hatched, the return limit in red and the crew marker. Right: simulation, flight rules and probe. Below: Mars clocks, playback and the sequence table. Imagery: NASA/JPL-Caltech/Univ. of Arizona.</figcaption></figure>
+</div>
+
+<h2>5. Results</h2>
+<h3>5.1 Reference walks</h3>
+<p>Two ready-made walks on ground driven by Curiosity illustrate the two outcomes (Table 5). Both were run with default parameters and two crew.</p>
+<p><i>Walk A, "Boxwork ridges".</i> Three stations on 2.94 km of rover track, with 2 h of work. The simulation gives 3 h 34 min. The farthest point is 13 min from the refuge at emergency pace against the 60 min limit, so FR-01 is the limiting rule with a margin of 47 min. The steepest ground is 15.8°, the refuge stays in sight, and the slow-pace case still holds with 82 min to spare. Fourteen of fifteen rules pass. The exception was FR-10, a caution on the day of the run, because a solar eruption was forecast to graze Mars. Verdict: GO.</p>
+<p><i>Walk B, "Dingo Gap to Pahrump Hills".</i> A long traverse of 9.91 km along the rover track. Consumables at nominal pace are sufficient (0.40 kg of oxygen left) and no slope exceeds 12.4°, so a check of distance, slope and oxygen alone would accept it. The tool rejects it: the farthest point is 62 min from the refuge at emergency pace (FR-01), and in the slow-pace case the cooling-water rule fails (FR-14). The refuge is also out of sight for 8.8 km of the route (advisory). Verdict: NO-GO.</p>
+
+<div class="wide">
+<table>
+  <caption><b>Table 5.</b> Simulation results for the two reference walks (run on 14 November 2026; FR-10 depends on the forecast of the day).</caption>
+  <thead><tr><th style="width:40%">Quantity</th><th>Walk A: Boxwork ridges</th><th>Walk B: Dingo Gap to Pahrump Hills</th></tr></thead>
+  <tbody>
+  <tr><td>Route length</td><td>2.94 km</td><td>9.91 km</td></tr>
+  <tr><td>Duration</td><td>3 h 34 min</td><td>4 h 14 min</td></tr>
+  <tr><td>Oxygen used (of 0.77 kg)</td><td>0.29 kg</td><td>0.37 kg</td></tr>
+  <tr><td>Cooling water used (of 3.86 kg)</td><td>2.07 kg</td><td>2.59 kg</td></tr>
+  <tr><td>Battery used (of 756 Wh)</td><td>285 Wh</td><td>338 Wh</td></tr>
+  <tr><td>Farthest point from refuge, emergency pace</td><td>13 min</td><td>62 min</td></tr>
+  <tr><td>Steepest ground on route</td><td>15.8°</td><td>12.4°</td></tr>
+  <tr><td>Slow-pace case (× 1.375)</td><td>4 h 09 min, all timed rules hold</td><td>5 h 39 min, cooling-water rule fails</td></tr>
+  <tr><td>Rules passed</td><td>14 of 15</td><td>11 of 15 (2 warnings, 1 caution, 1 advisory)</td></tr>
+  <tr><td>Verdict; limiting rule; margin</td><td>GO; FR-01; +47 min</td><td>NO-GO; FR-01 and FR-14; −2 min</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>5.2 Path finding off the rover track</h3>
+<p>Adding a station by a single click 483 m in a straight line from the previous one, on ground known only from orbit, produced the case in Figure 3 (left). The straight line crosses 139 m of ground steeper than 20°. The path found is 1092 m long, climbs 39 m and drops 40 m, stays at or below the limit and takes 34 min: more than twice the straight distance, for a route that is permitted. The leg is flagged by FR-05 and its steepest ground raises a caution under FR-04, which the user can see and act on.</p>
+
+<h3>5.3 Performance</h3>
+<p>On a laptop, in a browser without hardware graphics acceleration, decoding the 5-million-cell grid took about 0.1 s and the walk-home field with the line-of-sight map about 0.3 s. Path finding for a leg completes within a few seconds. The interface is usable while these products load, during which the verdict reads PROVISIONAL.</p>
+
+<div class="wide">
 <div class="two">
-  <figure><img src="../img/why.jpg" alt="Route explanation"><figcaption>"Why this path": the route avoids ground steeper than 20° (red). The dashed white line is the straight line that was rejected.</figcaption></figure>
-  <figure><img src="../img/flyover.jpg" alt="3D flyover"><figcaption>"Visualize path": HiRISE imagery on HiRISE elevation, with Curiosity's Navcam photo of the station.</figcaption></figure>
+  <figure><img src="../img/why_case.jpg" alt="Route explanation"><figcaption><b>Figure 3 (left).</b> "Why this path" for the leg of Section 5.2: ground that cannot be crossed in red, slow ground in yellow, the rejected straight line dashed.</figcaption></figure>
+  <figure><img src="../img/flyover.jpg" alt="3D flyover"><figcaption><b>Figure 3 (right).</b> 3D flyover: HiRISE imagery on HiRISE elevation, with Curiosity's Navcam photograph of the station.</figcaption></figure>
+</div>
 </div>
 
-<h3>The flight rules</h3>
-<table>
-  <tr><th>Rule</th><th>What is checked</th><th>Basis</th></tr>
-  <tr><td>FR-01 Suit-failure return</td><td>The refuge is always within 60 minutes at emergency pace</td><td>xEMU backup capability; Artemis III limits walking distance the same way</td></tr>
-  <tr><td>FR-02, 08, 09 Consumables</td><td>Oxygen, battery and cooling water cover the emergency walk home plus a 30 minute reserve</td><td>Apollo 15 planning memo; xEMU capacities; NASA BVAD</td></tr>
-  <tr><td>FR-03 Daylight</td><td>Back before sunset, with the reserve</td><td>Mars24 algorithm for the season at the refuge</td></tr>
-  <tr><td>FR-04 Slope</td><td>No ground steeper than 20°, up, down or across, at any point</td><td>Artemis suit requirement; HiRISE elevation model</td></tr>
-  <tr><td>FR-05, 06, 11</td><td>Ground driven by a rover; line of sight to the refuge; loose ground</td><td>Curiosity track; elevation model; THEMIS thermal inertia</td></tr>
-  <tr><td>FR-07 Duration</td><td>No longer than 8 hours</td><td>Suit requirement</td></tr>
-  <tr><td>FR-10 Space weather</td><td>No solar eruption forecast to reach Mars within 2 days</td><td>NASA DONKI WSA-Enlil forecasts</td></tr>
-  <tr><td>FR-12, 13</td><td>Keep-out zones; at least two crew</td><td>Set by the crew; NASA plans walks in pairs</td></tr>
-  <tr><td>FR-14, 15</td><td>The plan still holds if walking is 1.375 times slower; flags walks that depend on the pace model where it is weakest</td><td>Apollo traverse average; our own check on the model</td></tr>
-</table>
+</div>
 
-<h3>How it is built</h3>
-<p>A static web page: HTML, CSS and plain JavaScript modules, Leaflet for the 2D map and our own WebGL code for the 3D view. No server and no build step. The terrain engine runs in the browser in a web worker on a 5-million-cell elevation grid: slope, cast shadow for the time of day, line of sight to the refuge, a walk-home time field and least-time path finding. Data files are built from NASA's public services by Python scripts in the repository, so each can be regenerated. Plans, notes and the history of changes are stored in the browser (IndexedDB). 113 automated tests cover the simulation, the Mars clock, the terrain engine and the 3D mathematics.</p>
-<p>The interface follows NASA's display standard for alert colours (red warning, yellow caution, blue advisory, cyan stale or missing data) and is laid out as a workstation: resizable docks, a guided tour, search, information buttons that explain every term with links, and a large mode for gloved hands.</p>
-
-<h3>Working features, limitations and future plans</h3>
-<table>
-  <tr><th>Working now (in the live tool)</th><th>Details</th></tr>
-  <tr><td>Planning</td><td>Ready-made walks; sketching stations anywhere; three ways to walk a leg; keep-out zones; movable refuge (a pressurised rover); crew size</td></tr>
-  <tr><td>Simulation and rules</td><td>Step-by-step simulation; 15 flight rules; GO / NO-GO / PROVISIONAL / NOT EVALUATED; playback on the Mars clock; printable cuff card</td></tr>
-  <tr><td>Terrain engine</td><td>Slope, roughness, sun shading and cast shadow at the plan time, line of sight, walk-home time, path finding, "why this path" explanation</td></tr>
-  <tr><td>Data layers</td><td>More than 25 layers with presets; probe that reads every layer at a point; source link and explanation for each layer</td></tr>
-  <tr><td>3D</td><td>Flyover of the route over real terrain and imagery, with rover photos of the stations</td></tr>
-  <tr><td>Workstation</td><td>Guided tour, search, settings, resizable and hideable panels, saved plans, history with restore, undo and redo, notes on the map, export and import</td></tr>
-</table>
-<div class="box"><b>Limitations (also listed in the README).</b>
-  <ul>
-    <li>Walking speed and effort on Mars in a suit have never been measured. The model is extrapolated from Earth and Moon data (the speed curve of NASA and MIT's SEXTANT planner; Santee et al. 2001) and is tagged ASSUMED. It makes climbs very slow.</li>
-    <li>The elevation model is good for relative height, not absolute; slope is averaged over about 12 m.</li>
-    <li>The crew's position is assumed known; position error is not modelled. The plan has no date of its own: Sun, season and space weather are those of the day the tool is opened.</li>
-    <li>Space weather uses model forecasts; when NASA's service cannot be reached and the stored copy is older than 48 hours the rule reads "not evaluated".</li>
-    <li>Tested in desktop Chrome. Phone layout exists but is not the target. This is a planning and training prototype, not a certified flight product.</li>
-  </ul></div>
-<div class="box"><b>Future plans (not built).</b> A date and time for each plan; tracking the crew's real position during the walk; a second site (Jezero, with Perseverance's data); measured suited-walking data when it exists; a rover-assisted mode in which the rover drives to meet the crew; a light theme for bright cabins.</div>
-
-<h2>4. NASA data and resources</h2>
-<table>
-  <tr><th>Resource</th><th>How it is used</th></tr>
-  <tr><td><a href="https://science.nasa.gov/mission/msl-curiosity/location-map/">Curiosity Location Map</a> (NASA/JPL-Caltech)</td><td>The rover's 38.8 km track and 1,388 stop positions with elevation and tilt (sols 3 to 5070): the "proven ground" of the planner. HiRISE 25 cm and CTX map tiles for the base map and the 3D drape.</td></tr>
-  <tr><td><a href="https://trek.nasa.gov/mars/">NASA Mars Trek</a>: MRO HiRISE 1 m elevation model of Gale</td><td>Resampled to a 6 m grid (1552 × 3200 cells). Source of slope, relief lines, shadow, line of sight, walk-home time, path finding and the 3D terrain.</td></tr>
-  <tr><td><a href="https://mars.nasa.gov/msl/multimedia/raw-images/">Curiosity raw images</a></td><td>Navcam view at each rover stop, chosen to look along the track: what the crew will see on arrival.</td></tr>
-  <tr><td>NASA PDS Geosciences Node: <a href="https://pds-geosciences.wustl.edu/missions/msl/chemin.htm">CheMin</a>, <a href="https://pds-geosciences.wustl.edu/missions/msl/apxs.htm">APXS</a>, <a href="https://pds-geosciences.wustl.edu/missions/msl/chemcam.htm">ChemCam</a></td><td>Minerals of 48 drilled and scooped samples; chemistry of 1,784 spots; names of 4,393 laser targets; each placed at the rover stop where it was measured and shown in the probe.</td></tr>
-  <tr><td><a href="https://pds-geosciences.wustl.edu/missions/mro/crism.htm">MRO CRISM</a> (NASA PDS)</td><td>Map-projected mineral indicator maps (hydrated minerals, clays, iron minerals), 18 m, aligned to the base map.</td></tr>
-  <tr><td>Mars Odyssey THEMIS (via <a href="https://jmars.asu.edu/">ASU JMARS</a>)</td><td>Thermal inertia and night infrared, 100 m: where the ground is likely loose sand or dust (rule FR-11).</td></tr>
-  <tr><td><a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/">NASA DONKI</a></td><td>WSA-Enlil forecasts of solar eruptions reaching Mars (rule FR-10), read live with a stored fallback.</td></tr>
-  <tr><td><a href="https://www.giss.nasa.gov/tools/mars24/help/algorithm.html">NASA GISS Mars24 algorithm</a></td><td>Mars local mean and true solar time, season, Sun position, sunrise and sunset.</td></tr>
-  <tr><td><a href="https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/">Curiosity's Proposed Path up Mount Sharp</a></td><td>The named science regions and their colours; placed on the real track from published sol ranges.</td></tr>
-  <tr><td>NASA documents: <a href="https://ntrs.nasa.gov/citations/20210024855">BVAD Rev 2</a>, <a href="https://ntrs.nasa.gov/citations/20170009505">xEMU life support</a>, <a href="https://ntrs.nasa.gov/citations/20210026296">Artemis III surface requirements</a>, <a href="https://ntrs.nasa.gov/citations/20250004555">NASA-STD-3001 Vol 2</a></td><td>The constants of the simulation (oxygen per unit of effort, suit capacities, the 60 minute return limit, the 20° slope limit, the 8 hour limit) and the colour and alert conventions of the interface.</td></tr>
-  <tr><td><a href="https://www-robotics.jpl.nasa.gov/what-we-do/applications/user-interfaces/">JPL RSVP rover planning tools</a>; <a href="https://www.nasa.gov/reference/jsc-crew-interfaces/">JSC Crew Interfaces</a></td><td>The working method (sketch, simulate, validate) and the layout of the interface.</td></tr>
-</table>
-
-<h2>5. Space agency partner data and other references</h2>
-<table>
-  <tr><th>Resource</th><th>How it is used; licence or credit</th></tr>
-  <tr><td><a href="https://doi.org/10.5281/zenodo.6974535">DAN water and chlorine along Curiosity's traverse</a></td><td>Subsurface water layer and probe read-out. Nikiforov, Djachkova and Lisov (2022), CC BY 4.0. The DAN instrument was contributed by Roscosmos.</td></tr>
-  <tr><td>Partner instruments on Curiosity</td><td>APXS was provided by the Canadian Space Agency; ChemCam was built with the French space agency CNES. Their data are used through NASA's PDS (see section 4).</td></tr>
-  <tr><td><a href="https://www.esa.int/Science_Exploration/Space_Science/Mars_Express">ESA Mars Express HRSC</a></td><td>Regional base map around Jezero, as served in NASA's Perseverance map. Credit ESA/DLR/FU Berlin.</td></tr>
-  <tr><td><a href="https://pubs.usgs.gov/sim/3292/">USGS Geologic Map of Mars, SIM 3292</a></td><td>Geologic unit at a point (1:20,000,000; stated as too coarse for a single walk). Tanaka and others, 2014.</td></tr>
-  <tr><td><a href="https://github.com/openplanetary/opm">OpenPlanetaryMap</a></td><td>Whole-planet base map when zoomed out.</td></tr>
-  <tr><td><a href="https://github.com/norheim/pextant">SEXTANT / pextant</a> (MIT, NASA)</td><td>The walking-speed-against-slope function, re-implemented; and Santee et al. 2001 for metabolic cost.</td></tr>
-  <tr><td><a href="https://leafletjs.com/">Leaflet 1.9.4</a>; <a href="https://rsms.me/inter/">Inter typeface</a></td><td>Map library (BSD-2-Clause) and bundled fallback font (SIL Open Font License).</td></tr>
-</table>
-<p class="small">All screenshots in this document are of the team's own tool. Map imagery in them: NASA/JPL-Caltech/University of Arizona/MSSS. No NASA logos or mission emblems are used. Not affiliated with or endorsed by NASA.</p>
-
-<h2>6. Use of artificial intelligence (AI / SI)</h2>
-<p><b>Tool used:</b> Claude, an AI coding assistant by Anthropic.</p>
-<p><b>What it was used for, and which parts are affected:</b></p>
+<div class="cols np">
+<h2 style="margin-top:0">6. Discussion and Limitations</h2>
+<p>The two walks show the point of the approach. Walk B is acceptable by distance, slope and oxygen, and is rejected by a rule that only a time field over real terrain can evaluate. The explanation view and the rule text make the reason visible, which is what a controller clearing the plan needs.</p>
+<p>The results are bounded by the following limits, which the tool also states.</p>
 <ul>
-  <li><b>Code:</b> most of the program code (JavaScript, CSS, HTML) and the Python scripts that build the data files were written by the assistant under the team's direction. This is stated in the repository README.</li>
-  <li><b>Research:</b> background research on NASA data sources, suit and life-support figures and interface standards; every figure used in the tool is cited to its source.</li>
-  <li><b>Review:</b> an AI-run adversarial review was used to find defects, which were then fixed.</li>
-  <li><b>Documents:</b> this description and the demo slides were drafted with the assistant and checked by the team.</li>
+  <li><b>The walking model is unvalidated for Mars.</b> Suited walking speed and effort in Mars gravity have never been measured. The speed curve comes from lunar data and makes climbs very slow (about 0.5 km/h at +10° and 0.1 km/h near +20°); the power model is an Earth treadmill model rescaled to a design rate. Both are tagged ASSUMED, and FR-14 and FR-15 exist to expose plans that depend on them.</li>
+  <li><b>Terrain.</b> The grid is suited to relative height. It lies a few metres to about 20 m from the rover's own elevations, and its vertical datum is not stated by the service. Slope averaged over 12 m understates short steps. Paths turn in 45° steps and read up to 8% long. Rocks and sand at footstep scale are not seen by any layer.</li>
+  <li><b>Navigation.</b> The crew's position is assumed known; position error is not modelled.</li>
+  <li><b>Time.</b> A plan has no date of its own: Sun, season and space weather are those of the day the tool is opened.</li>
+  <li><b>Environment.</b> Space weather is a model forecast, not a measurement at Mars; when the service cannot be reached and the stored copy is older than 48 hours the rule reads not evaluated. Dust storms, thermal loads and particle dose are not modelled.</li>
+  <li><b>Emergency case.</b> The return assumes an able walker; an injured crew member is not modelled.</li>
+  <li><b>Status.</b> Tenacity is a prototype for planning and training, tested in desktop browsers. It is not a certified flight product.</li>
 </ul>
-<p><b>What the team did:</b> chose the challenge, set the concept (a rover-planner-style tool for astronauts) and the requirements, directed the design, and reviewed and tested the result.</p>
-<p><b>Not used:</b> no AI-generated images, video or audio are part of the project. All pictures are screenshots of the working tool or NASA imagery inside it.</p>
+
+<h2>7. Future Work</h2>
+<p>Planned extensions, none of which is built: a date and time for each plan; tracking of the crew's real position during the walk; a second site at Jezero with Perseverance's data; replacement of the walking model when measured suited-walking data exist; a rover-assisted mode in which the rover drives to meet the crew; and a light theme for bright cabins.</p>
+
+<h2>8. Conclusion</h2>
+<p>The sketch, simulate and validate loop that protects rover drives can be given to a crew on foot with public NASA data and a web browser. Tenacity answers one question, whether a walk can be made and the refuge regained, names the rule that decides, shows where on the map it applies, and is explicit about which of its numbers are measured and which are assumed.</p>
+
+<h2>Availability</h2>
+<p>The tool runs at the live link above in a desktop browser (Chrome, Edge or Firefox) with no login or installation; an internet connection is needed for NASA's map imagery. A guided tour is offered on the first visit. Walk A loads by itself; walk B is selected in the Plan list. Switching Mode to Sketch and clicking the map reproduces Section 5.2. The source code, data-building scripts and tests are in the repository under the MIT licence.</p>
+
+<h2>Use of Artificial Intelligence</h2>
+<p>The team chose the challenge, set the concept (a rover-planner-style tool for astronauts), the requirements and the design direction, and reviewed and tested the result. Research was carried out in two ways. Part of it was done by the team by hand: finding and reading primary sources, among them JPL's description of the rover planning tools, NASA's crew-interface material, NASA's map of Curiosity's proposed path up Mount Sharp, NASA Mars Trek, the USGS geologic map and the rover image archives. The team also used Perplexity, an AI search assistant, to locate and cross-check sources. Further background research, most of the program code (JavaScript, CSS, HTML) and the Python scripts that build the data files were produced with Claude, an AI coding assistant by Anthropic, working under the team's direction; an AI-run adversarial review was used to find defects; and this document and the demo slides were drafted with the assistant and checked by the team. No AI-generated images, video or audio are part of the project: all pictures are screenshots of the working tool or NASA imagery inside it.</p>
+
+<h2>Acknowledgements and Credits</h2>
+<p>Data and imagery courtesy of NASA/JPL-Caltech, the University of Arizona, Malin Space Science Systems, Arizona State University, the NASA Planetary Data System and the U.S. Geological Survey. APXS was provided by the Canadian Space Agency, DAN by Roscosmos, and ChemCam was built with the French space agency CNES; the regional base map around Jezero is from ESA Mars Express HRSC (ESA/DLR/FU Berlin). The whole-planet base map is OpenPlanetaryMap. No NASA logos or mission emblems are used. This project is not affiliated with or endorsed by NASA.</p>
+
+</div>
+
+<div class="cols np">
+<h2 style="margin-top:0">References</h2>
+<ol class="refs">
+  <li>Jet Propulsion Laboratory, Robotics. User Interfaces: the Rover Sequencing and Visualization Program (RSVP). <a href="https://www-robotics.jpl.nasa.gov/what-we-do/applications/user-interfaces/">www-robotics.jpl.nasa.gov/what-we-do/applications/user-interfaces/</a></li>
+  <li>Rankin, A., et al. (2023). Perseverance rapid traverse campaign. IEEE Aerospace Conference. <a href="https://www-robotics.jpl.nasa.gov/media/documents/2023-rapid-traverse.pdf">www-robotics.jpl.nasa.gov/media/documents/2023-rapid-traverse.pdf</a></li>
+  <li>Norheim, J., et al. SEXTANT / pextant traverse planner (MIT, NASA), source code. <a href="https://github.com/norheim/pextant">github.com/norheim/pextant</a></li>
+  <li>Campbell, C. (2017). Description of the xEMU portable life support system schematic. NASA NTRS 20170009505. <a href="https://ntrs.nasa.gov/citations/20170009505">ntrs.nasa.gov/citations/20170009505</a></li>
+  <li>Scoville, Z. (2021). Artemis III surface extravehicular activity requirements, landing-site presentation. NASA NTRS 20210026296. <a href="https://ntrs.nasa.gov/citations/20210026296">ntrs.nasa.gov/citations/20210026296</a></li>
+  <li>NASA (2022). Life Support Baseline Values and Assumptions Document, NASA/TP-2015-218570, Rev 2. <a href="https://ntrs.nasa.gov/citations/20210024855">ntrs.nasa.gov/citations/20210024855</a></li>
+  <li>Bellcomm, Inc. (1970). Apollo 15 EVA capability and constraints envelopes. Memorandum B70-10028.</li>
+  <li>NASA (2025). NASA-STD-3001, NASA Space Flight Human-System Standard, Volume 2: Human Factors, Habitability, and Environmental Health. <a href="https://ntrs.nasa.gov/citations/20250004555">ntrs.nasa.gov/citations/20250004555</a></li>
+  <li>NASA Johnson Space Center. JSC Crew Interfaces. <a href="https://www.nasa.gov/reference/jsc-crew-interfaces/">www.nasa.gov/reference/jsc-crew-interfaces/</a></li>
+  <li>Marquez, J. J. (2008). Human-automation collaboration: decision support for lunar and planetary exploration. Doctoral thesis, Massachusetts Institute of Technology. (Speed function as credited in [3].)</li>
+  <li>Santee, W. R., Allison, W. F., Blanchard, L. A., and Small, M. G. (2001). A proposed model for load carriage on sloped terrain. Aviation, Space, and Environmental Medicine, 72(6), 562–566.</li>
+  <li>NASA Community Coordinated Modeling Center. Space Weather Database of Notifications, Knowledge, Information (DONKI). <a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/">ccmc.gsfc.nasa.gov/tools/DONKI/</a></li>
+  <li>NASA/JPL-Caltech. Curiosity (MSL) location map and raw images. <a href="https://science.nasa.gov/mission/msl-curiosity/location-map/">science.nasa.gov/mission/msl-curiosity/location-map/</a></li>
+  <li>NASA. Mars Trek: MRO HiRISE elevation model of Gale crater. <a href="https://trek.nasa.gov/mars/">trek.nasa.gov/mars/</a></li>
+  <li>NASA Planetary Data System, Geosciences Node. MSL CheMin, APXS and ChemCam archives. <a href="https://pds-geosciences.wustl.edu/missions/msl/">pds-geosciences.wustl.edu/missions/msl/</a></li>
+  <li>NASA Planetary Data System, Geosciences Node. MRO CRISM. <a href="https://pds-geosciences.wustl.edu/missions/mro/crism.htm">pds-geosciences.wustl.edu/missions/mro/crism.htm</a></li>
+  <li>Arizona State University. JMARS: Mars Odyssey THEMIS thermal inertia and infrared mosaics. <a href="https://jmars.asu.edu/">jmars.asu.edu</a></li>
+  <li>Nikiforov, S., Djachkova, M., and Lisov, D. (2022). DAN water and chlorine along Curiosity's traverse. Zenodo, CC BY 4.0. <a href="https://doi.org/10.5281/zenodo.6974535">doi.org/10.5281/zenodo.6974535</a></li>
+  <li>Tanaka, K. L., et al. (2014). Geologic map of Mars. U.S. Geological Survey Scientific Investigations Map 3292. <a href="https://pubs.usgs.gov/sim/3292/">pubs.usgs.gov/sim/3292/</a></li>
+  <li>NASA. Curiosity's proposed path up Mount Sharp. <a href="https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/">science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/</a></li>
+  <li>Oliver, et al. (2026). Mars portable life support system schematic study. ICES-2026-158. NASA NTRS 20260002884.</li>
+  <li>Waligora, J. M., and Horrigan, D. J. (1975). Metabolism and heat dissipation during Apollo EVA periods. In Biomedical Results of Apollo, NASA SP-368. <a href="https://ntrs.nasa.gov/citations/19750006325">ntrs.nasa.gov/citations/19750006325</a></li>
+  <li>Allison, M., and McEwen, M. (2000). A post-Pathfinder evaluation of areocentric solar coordinates with improved timing recipes for Mars seasonal/diurnal climate studies. Planetary and Space Science, 48, 215–235. Mars24 algorithm: <a href="https://www.giss.nasa.gov/tools/mars24/help/algorithm.html">www.giss.nasa.gov/tools/mars24/help/algorithm.html</a></li>
+</ol>
+
+</div>
 </body></html>
