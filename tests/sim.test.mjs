@@ -396,7 +396,7 @@ test('a very long work step fails oxygen or duration exactly as arithmetic predi
   near(ruleOf(light, 'FR-07').value, 8.5, 1e-9);
 
   // water and battery follow the same arithmetic
-  const waterLeft = 4.536 - 8.5 * 3600 * (144 + 92.9) / 2.45e6;
+  const waterLeft = SUIT.waterStartKg.value - 8.5 * 3600 * (144 + 92.9) / 2.45e6;
   near(ruleOf(light, 'FR-09').marginMin, waterLeft / ((422 + 92.9) / 2.45e6 * 60) - 30, 1e-6);
   near(ruleOf(light, 'FR-08').marginMin, (756 - 8.5 * 80) / 80 * 60 - 30, 1e-6);
 });

@@ -36,8 +36,8 @@ export const SUIT = {
     'Respiratory quotient 0.90 (BVAD Rev 2, p. 134) times the molar mass ratio 44/32.', BVAD2),
 
   // ---- Cooling water ----
-  waterStartKg: c(4.536, 'kg', 'NASA VALUE',
-    'Label "10 lbs H2O" on the primary Feedwater Supply Assembly FSA-431 in the xEMU PLSS schematic (Campbell 2017, PDF p. 7). The usable fraction is not stated. 10 lb = 4.536 kg.', XEMU),
+  waterStartKg: c(3.856, 'kg', 'DERIVED',
+    'The xEMU feedwater assembly FSA-431 is labelled "10 lbs H2O" in the PLSS schematic (Campbell 2017, PDF p. 7), drawn as an 8.5 lb bladder plus a 1.5 lb bladder, and the check valves signal "with ~ 1 lb of feedwater remaining" (p. 16). Usable water is therefore about 8.5 to 9 lb; the model uses 8.5 lb = 3.856 kg.', XEMU),
   coolingWaterKgHAt295W: c(0.57, 'kg/h at 295 W', 'NASA VALUE',
     'Cooling water "0.57 kg/h, which is a typical value when a radiator is not used. The calculation here assumes a human metabolic rate of 1.06 MJ/CM-h (295 W)" (BVAD Rev 2, section 4.6.2, p. 133). Kept for reference; the model uses the two entries below, which reproduce it.', BVAD2),
   coolingExtraHeatW: c(92.9, 'W', 'DERIVED',
@@ -52,7 +52,7 @@ export const SUIT = {
     'No published xEMU power budget was found. 80 W drains the 756 Wh battery in 9.45 h, i.e. an 8 h walk plus margin.'),
 
   // ---- Walking ----
-  speedKmh: c(3.3, 'km/h on level ground', 'NASA VALUE',
+  speedKmh: c(3.3, 'km/h on level ground', 'ASSUMED',
     '"The metabolic rate for planned walking traverses is 1200 BTU/hr at a speed of 3.3 km/hr" (Bellcomm memo B70-10028, Apollo 15 EVA Capability and Constraints Envelopes, 1970). A lunar planning value; using it on Mars is an assumption. Artemis III plans 2 km/h.', A15),
   levelWatts: c(352, 'W on level ground at the planned speed', 'NASA VALUE',
     '"The xEMU average design metabolic rate is 1.27 MJ/CM-h (352 W)" (BVAD Rev 2, p. 134). Equal to the Apollo 15 planning rate for walking, 1200 BTU/hr = 352 W at 3.3 km/h.', BVAD2),
@@ -74,7 +74,7 @@ export const SUIT = {
     'xEMU Auxiliary Thermal Control Loop is "designed to support an EVA abort to the vehicle safe haven for 60 minutes" (Campbell 2017, section 2.6, PDF p. 16). Artemis III: "1 hour of contingency capability to protect suit system failures" (Scoville 2021, slide 4).', XEMU),
   emergencyReturnHighFlowMin: c(30, 'min', 'NASA VALUE',
     'Sensitivity case: the suit purge valve "would offer the 30 minute abort time at the higher flow rate" (Campbell 2017, PDF p. 15).', XEMU),
-  emergencySpeedKmh: c(3.3, 'km/h on level ground', 'NASA VALUE',
+  emergencySpeedKmh: c(3.3, 'km/h on level ground', 'ASSUMED',
     '"A 20% pad is required for emergency walkback, making the metabolic rate 1440 BTU/hr at a speed of 3.3 km/hr" (Bellcomm memo B70-10028, 1970). Lunar planning value, assumed for Mars.', A15),
   emergencyWatts: c(422, 'W', 'NASA VALUE',
     '1440 BTU/hr = 422 W for emergency walkback (Bellcomm memo B70-10028, 1970). Lunar planning value, assumed for Mars.', A15),
@@ -172,7 +172,10 @@ export function paceAndPower(slopeDeg, params, emergency = false) {
   const s = Number.isFinite(slopeDeg) ? slopeDeg : 0;
   const levelMs = (emergency ? p.emergencySpeedKmh : p.speedKmh) / 3.6;
   const speedMs = marquezMs(s) * (levelMs / MARQUEZ_LEVEL_MS);
-  const watts = emergency ? p.emergencyWatts : santeeWatts(s, speedMs, p);
+  // The speed curve slows a climb so much that the raw formula would make it cheaper than level
+  // walking. Apollo crews recorded their highest rates on climbs, so a climb never costs less than level ground.
+  let watts = emergency ? p.emergencyWatts : santeeWatts(s, speedMs, p);
+  if (!emergency && s > 0) watts = Math.max(watts, santeeWatts(0, levelMs, p));
   return { speedMs, watts };
 }
 
@@ -334,9 +337,13 @@ export function simulate(plan, params = {}, env = {}) {
 
   const samples = [];
   const steps = [];
+  // The slope of the ground itself where the crew stands, whichever way it faces, when the app can
+  // supply it. Walking along a steep hillside has little slope along the path but is still steep ground.
+  const groundAt = typeof e.groundSlopeAt === 'function' ? e.groundSlopeAt : null;
   const sample = (stepIndex, slopeDeg, speedMs, watts) => {
+    const g = groundAt ? groundAt(pos.lat, pos.lon) : null;
     samples.push({
-      tS, lat: pos.lat, lon: pos.lon, elev: pos.elev, distM, slopeDeg, speedMs, watts,
+      tS, lat: pos.lat, lon: pos.lon, elev: pos.elev, distM, slopeDeg, groundDeg: Number.isFinite(g) ? g : null, speedMs, watts,
       o2Kg, waterKg, battWh, homeS: 0, stepIndex, backS, aheadS,
     });
   };
@@ -506,15 +513,17 @@ export function simulate(plan, params = {}, env = {}) {
     });
   }
 
-  // FR-04 slope along the direction of travel.
+  // FR-04 slope: up, down or across. The steeper of the slope along the path and the slope of the
+  // ground itself is judged, at every point including the stations and the refuge.
   {
     const cautionAt = p.slopeLimitDeg - p.slopeCautionBandDeg;
-    const walking = samples.filter((s) => steps[s.stepIndex].type === 'walk');
-    const worst = walking.reduce((w, s) => (w === null || Math.abs(s.slopeDeg) > Math.abs(w.slopeDeg) ? s : w), null);
-    const maxDeg = worst ? Math.abs(worst.slopeDeg) : 0;
+    const steep = (s) => Math.max(Math.abs(s.slopeDeg), s.groundDeg ?? 0);
+    for (const st of steps) for (const s of samples) if (s.stepIndex === st.i && steep(s) > st.maxSlopeDeg) st.maxSlopeDeg = steep(s);
+    const worst = samples.reduce((w, s) => (w === null || steep(s) > steep(w) ? s : w), null);
+    const maxDeg = worst ? steep(worst) : 0;
     const level = maxDeg > p.slopeLimitDeg ? 'warning' : maxDeg > cautionAt ? 'caution' : 'pass';
     const segs = stretches(samples, (s) => {
-      const a = Math.abs(s.slopeDeg);
+      const a = steep(s);
       return a > p.slopeLimitDeg ? 'warning' : a > cautionAt ? 'caution' : null;
     });
     const over = stretchLengthM(segs.filter((s) => s.level === 'warning'));
@@ -522,8 +531,8 @@ export function simulate(plan, params = {}, env = {}) {
       value: maxDeg, limit: p.slopeLimitDeg, units: 'deg',
       stepIndex: worst && level !== 'pass' ? worst.stepIndex : null, segments: segs,
       text: level === 'warning'
-        ? `The steepest ground on the route is ${maxDeg.toFixed(1)} deg, over the ${p.slopeLimitDeg} deg suit limit for ${fmtKm(over)}.`
-        : `The steepest ground on the route is ${maxDeg.toFixed(1)} deg against the ${p.slopeLimitDeg} deg suit limit.`,
+        ? `The steepest ground on the route is ${maxDeg.toFixed(1)} deg, over the ${p.slopeLimitDeg} deg suit limit for ${fmtKm(over)}${groundAt ? ' (slope of the ground, along or across the path)' : ''}.`
+        : `The steepest ground on the route is ${maxDeg.toFixed(1)} deg against the ${p.slopeLimitDeg} deg suit limit${groundAt ? ', along or across the path' : '; slope across the path was not checked'}.`,
     });
   }
 
@@ -571,17 +580,19 @@ export function simulate(plan, params = {}, env = {}) {
   if (e.spaceWeather) {
     const days = e.spaceWeather.marsImpactWithinDays;
     const bad = typeof days === 'number' && days <= p.spaceWeatherWarnDays;
+    const stale = !!e.spaceWeather.stale;
     const note = e.spaceWeather.note ? ` ${e.spaceWeather.note}` : '';
     // A forecast direct hit blocks the walk; a glancing blow is a caution.
     const glancing = !!e.spaceWeather.glancing;
     const when = days === 0 ? 'now or within the last day' : `within ${days} day${days === 1 ? '' : 's'}`;
-    rule('FR-10', 'Space weather', bad ? (glancing ? 'caution' : 'warning') : 'pass', {
+    rule('FR-10', 'Space weather', bad ? (glancing ? 'caution' : 'warning') : stale ? 'unknown' : 'pass', {
       value: typeof days === 'number' ? days : null, limit: p.spaceWeatherWarnDays, units: 'days',
       text: (bad
         ? `A solar eruption is forecast to ${glancing ? 'graze' : 'reach'} Mars ${when}, inside the ${p.spaceWeatherWarnDays} day limit.`
         : typeof days === 'number'
           ? `The next Mars-directed solar event is ${days} days away, outside the ${p.spaceWeatherWarnDays} day limit.`
-          : 'No Mars-directed solar event is forecast.') + note,
+          : stale ? 'Not evaluated: the forecast data are too old to say whether a solar eruption is on its way to Mars.'
+            : 'No Mars-directed solar event is forecast.') + note,
     });
   }
 
@@ -654,7 +665,9 @@ export function simulate(plan, params = {}, env = {}) {
     `Oxygen use is ${(p.o2KgPerWh * 1000).toFixed(3)} g per watt-hour of effort plus ${(p.o2LeakKgH * 1000).toFixed(0)} g/h leakage; purge, pre-breathe and swing-bed losses are not counted.`,
     `Cooling water carries away all body heat plus a constant ${p.coolingExtraHeatW} W by evaporation, with no radiator and no heat lost to the cold surroundings; real use on Mars should be lower.`,
     `The battery load is an assumed constant ${p.battLoadW} W.`,
-    `Slope is measured along the direction of travel over ${p.slopeBaseM} m of path; walking across a steep hillside is not detected.`,
+    groundAt
+      ? `Slope is judged two ways: along the direction of travel over ${p.slopeBaseM} m of path, and as the slope of the ground itself from the terrain model, so walking across a steep hillside is caught.`
+      : `Slope is measured along the direction of travel over ${p.slopeBaseM} m of path only; walking across a steep hillside is not detected without the terrain model.`,
     'Loose ground and rocks are flagged where the app supplies them but add no time or effort.',
     'The walk is assumed to start at the refuge; time in the airlock and suit checks are not counted.',
     'Daylight uses the sunrise and sunset the app supplies; a flat horizon ignores crater walls and dust.',

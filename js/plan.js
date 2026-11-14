@@ -38,10 +38,32 @@ export function fromTrip(trip) {
   };
 }
 
-export function valid(plan) {
-  const ok = (at) => at && (at.stop ? S.byId.has(at.stop) : Number.isFinite(at.lat) && Number.isFinite(at.lon));
-  return !!plan && ok(plan.refuge) && Array.isArray(plan.stations) && plan.stations.every((s) => ok(s.at));
+// A free point must lie inside the mapped box around the rover track; a stop must exist.
+function okPoint(at) {
+  if (!at || typeof at !== 'object') return false;
+  if (at.stop !== undefined) return S.byId.has(String(at.stop));
+  const [[south, west], [north, east]] = S.overlays.bounds;
+  return typeof at.lat === 'number' && typeof at.lon === 'number' && at.lat >= south && at.lat <= north && at.lon >= west && at.lon <= east;
 }
+export function valid(plan) {
+  return !!plan && typeof plan === 'object' && okPoint(plan.refuge) && Array.isArray(plan.stations) && plan.stations.length <= 40 && plan.stations.every((s) => s && okPoint(s.at));
+}
+
+// A plan from storage or a file, rebuilt field by field so nothing unexpected rides along. Null if it is not a plan.
+const MODES = ['track', 'direct', 'auto'];
+const num = (v, lo, hi, def) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def);
+export function clean(plan) {
+  if (!valid(plan)) return null;
+  const at = (a) => (a.stop !== undefined ? { stop: String(a.stop) } : { lat: a.lat, lon: a.lon, name: String(a.name || 'Map point').slice(0, 60) });
+  return {
+    name: String(plan.name || 'Walk').slice(0, 60),
+    refuge: at(plan.refuge),
+    ret: MODES.includes(plan.ret) ? plan.ret : 'direct',
+    stations: plan.stations.map((st) => ({ at: at(st.at), dwellMin: Math.round(num(st.dwellMin, 0, 600, 30)), effort: ['light', 'moderate', 'heavy'].includes(st.effort) ? st.effort : 'moderate', leg: MODES.includes(st.leg) ? st.leg : 'direct' })),
+    koz: (Array.isArray(plan.koz) ? plan.koz : []).filter(okPoint).slice(0, 20).map((z) => ({ lat: z.lat, lon: z.lon, r: num(z.r, 5, 500, 30) })),
+  };
+}
+export const SEARCH_MAX_S = 2 * 3600;   // a path search gives up beyond this much walking for one leg
 
 const gridElev = (lat, lon) => {
   if (!S.grid || !S.T) return NaN;
@@ -113,7 +135,7 @@ function autoPath(a, b) {
 // finding a path over the terrain needs the elevation grid.
 export function legMode(a, b, wanted) {
   if (wanted === 'track' && a.chain !== null && b.chain !== null) return 'track';
-  if (wanted === 'auto' && S.grid) return 'auto';
+  if (wanted === 'auto' && S.grid && distM(a, b) > 2 * S.grid.dx) return 'auto';   // too short to need a search
   return 'direct';
 }
 
@@ -128,7 +150,7 @@ export function buildLegs() {
     const found = mode === 'auto' ? autoPath(prev, b) : null;
     const noRoute = !!(found && found.failed);
     const { path, line } = mode === 'track' ? trackPath(prev, b) : found && !noRoute ? found : directPath(prev, b);
-    legs.push({ id, to, toName, from: prev, dest: b, mode, proven: mode === 'track', path, line, station, noRoute, searching: mode === 'auto' && !found,
+    legs.push({ id, to, toName, from: prev, dest: b, mode, proven: mode === 'track', path, line, station, noRoute, searching: mode === 'auto' && !found, explain: found && !noRoute ? found.explain : null,
       lengthM: path[path.length - 1].distM, headingDeg: headingDeg(prev, b), goal: localM(ref, b) });
     prev = b;
   };

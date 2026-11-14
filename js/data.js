@@ -4,7 +4,7 @@
 import { S, C, RAMP, esc, emit, on, log, parseClock, distM, localM, MARS_HOUR_S, MARS_R } from './state.js';
 import * as P from './plan.js';
 import * as MV from './mapview.js';
-import * as SIM from './sim.js';
+import * as SIM from './sim.js';   // also: speed tables for the terrain engine
 import * as SUN from './sun.js';
 
 const OBSERVER_M = 3;        // height of the refuge antenna above ground, for line of sight (assumed)
@@ -93,18 +93,30 @@ function terrainLayers() {
     make: () => MV.patternLayer(() => (S.visMask = S.visMask || MV.gridCanvas(g.w, g.h, (i) => (S.vis[i] ? null : [255, 255, 255, 255]))), b, 'bars') });
 
   MV.addLayer({ id: 'home', title: 'Walk-home time to the refuge', group: 'Reach', kind: 'fill', cat: 'standard', avail: has('home'), tag: 'DERIVED',
-    prov: 'Fastest walk back to the refuge from every cell at emergency pace, slower on slopes, never across ground steeper than the block slope. From the elevation grid; real ground will be slower.',
+    prov: 'Fastest walk back to the refuge from every cell at emergency pace, slower on slopes, never across ground steeper than the slope limit and never through a keep-out zone. Computed out to 3 hours. From the elevation grid; real ground will be slower.',
     ramp: () => { const m = limMin(); return [[RAMP[0], `under ${m / 4} min`], [RAMP[1], `${m / 4} to ${m / 2}`], [RAMP[2], `${m / 2} to ${(3 * m) / 4}`], [RAMP[4], `${(3 * m) / 4} to ${m} min`]]; },
     make: () => { const q = (limMin() * 60) / 4; const t = S.home.time;
       return MV.fillLayer(MV.gridCanvas(g.w, g.h, (i) => (t[i] <= 4 * q ? classColour(t[i] <= q ? 0 : t[i] <= 2 * q ? 1 : t[i] <= 3 * q ? 2 : 4) : null)), b); } });
 
+  // What the path finder weighs: ground it cannot cross (red) and ground that is slow (yellow).
+  // Red and yellow are used here on purpose: this is hazard, not data.
+  MV.addLayer({ id: 'pace', title: 'Walking difficulty (why routes go where they go)', group: 'Reach', kind: 'fill', cat: 'standard', avail: has('slope'), tag: 'DERIVED',
+    prov: 'How the path finder sees the ground. Red: steeper than the slope limit or inside a keep-out zone, never crossed. Yellow: slopes where walking drops below half the level pace. Clear: easy ground.',
+    ramp: () => [['rgba(255,214,10,0.45)', 'slow: 6° to 10°'], ['rgba(255,214,10,0.85)', `very slow: 10° to ${S.params.slopeLimitDeg ?? 20}°`], ['#e0362c', 'cannot cross']],
+    make: () => { const lim = S.params.slopeLimitDeg ?? 20; const koz = kozMask();
+      return MV.fillLayer(MV.gridCanvas(g.w, g.h, (i) => { const v = S.slope[i]; return (koz && koz[i]) || v > lim ? [224, 54, 44, 190] : v > 10 ? [255, 214, 10, 165] : v > 6 ? [255, 214, 10, 80] : null; }), b, { opacity: 0.8 }); } });
+
   MV.addLayer({ id: 'limit', title: 'Suit-failure return limit', group: 'Reach', kind: 'pattern', cat: 'standard', avail: has('home'), tag: 'DERIVED', minZoom: 10, swatch: 'limit',
-    prov: 'The edge of the ground from which the refuge can be reached on foot within the emergency return time (FR-01), walking around ground steeper than the block slope. Inside the line you can get home on the backup supply.',
-    make: () => MV.patternLayer(() => (S.limitMask = S.limitMask || MV.maskCanvas(boundary(S.home.time, limMin() * 60, g.w, g.h), g.w, g.h)), b, 'limit') });
+    prov: 'The edge of the ground from which the refuge can be reached on foot within the emergency return time (FR-01), walking around ground steeper than the slope limit. Inside the line you can get home on the backup supply.',
+    make: () => MV.patternLayer(() => {
+      // A one-cell line close in, a thicker one from far away so it does not vanish.
+      S.limitMask = S.limitMask || { thin: MV.maskCanvas(boundary(S.home.time, limMin() * 60, g.w, g.h, false), g.w, g.h), thick: MV.maskCanvas(boundary(S.home.time, limMin() * 60, g.w, g.h, true), g.w, g.h) };
+      return MV.map.getZoom() >= 14.5 ? S.limitMask.thin : S.limitMask.thick;
+    }, b, 'limit', true) });
 }
 
 // The edge of the region where value <= limit, two to three cells wide so it survives zooming out.
-function boundary(value, limit, w, h) {
+function boundary(value, limit, w, h, thick = true) {
   const edge = new Uint8Array(w * h);
   for (let r = 1; r < h - 1; r++) {
     for (let c = 1; c < w - 1; c++) {
@@ -112,27 +124,42 @@ function boundary(value, limit, w, h) {
       if (value[i] <= limit && (value[i - 1] > limit || value[i + 1] > limit || value[i - w] > limit || value[i + w] > limit)) edge[i] = 1;
     }
   }
+  if (!thick) return edge;
   const out = new Uint8Array(w * h);
   for (let i = w; i < w * h - w; i++) if (edge[i] || edge[i - 1] || edge[i + 1] || edge[i - w] || edge[i + w]) out[i] = 1;
   return out;
 }
 
 // Keep-out zones as a blocked-cell mask for route finding. Null when there are none.
+// A cell is blocked if any part of it can lie inside a zone: distance from the zone's true centre
+// to the cell centre, less than the radius plus half a cell diagonal.
 function kozMask() {
   const zones = S.plan.koz || [];
   if (!zones.length || !S.grid) return null;
   const g = S.grid;
   const mask = new Uint8Array(g.w * g.h);
+  const pad = Math.hypot(g.dx, g.dy) / 2;
   for (const z of zones) {
     const c = S.T.cellOf(g, z.lat, z.lon);
-    const rx = Math.ceil(z.r / g.dx);
-    const ry = Math.ceil(z.r / g.dy);
+    const rx = Math.ceil((z.r + pad) / g.dx) + 1;
+    const ry = Math.ceil((z.r + pad) / g.dy) + 1;
     for (let r = Math.max(0, c.row - ry); r <= Math.min(g.h - 1, c.row + ry); r++) {
       for (let col = Math.max(0, c.col - rx); col <= Math.min(g.w - 1, c.col + rx); col++) {
-        if (Math.hypot((col - c.col) * g.dx, (r - c.row) * g.dy) <= z.r) mask[r * g.w + col] = 1;
+        if (distM(z, S.T.latLonOf(g, col, r)) <= z.r + pad) mask[r * g.w + col] = 1;
       }
     }
   }
+  return mask;
+}
+
+// Everything a route may not enter: keep-out zones, and ground whose own slope is over the suit
+// limit whichever way it is walked (up, down or across).
+function blockedMask() {
+  if (!S.grid || !S.slope) return kozMask();
+  const lim = S.params.slopeLimitDeg ?? 20;
+  const koz = kozMask();
+  const mask = new Uint8Array(S.slope.length);
+  for (let i = 0; i < mask.length; i++) mask[i] = (koz && koz[i]) || S.slope[i] > lim ? 1 : 0;
   return mask;
 }
 
@@ -143,15 +170,15 @@ function findPaths(render) {
     const params = { blockSlopeDeg: S.params.slopeLimitDeg ?? 20 };
     if (Number.isFinite(S.params.speedKmh)) params.speedKmh = S.params.speedKmh;
     const direct = distM(a, b);
-    const opts = { speedBySlope: SIM.speedTable(params, false), toward: false, maxTimeS: Math.max(2400, direct / 0.12) };
-    const blocked = kozMask();
+    const opts = { speedBySlope: SIM.speedTable(params, false), toward: false, maxTimeS: P.SEARCH_MAX_S };
+    const blocked = blockedMask();
     if (blocked) opts.blocked = blocked;
     try {
       const res = await call('costDistance', [{ lat: a.lat, lon: a.lon }], opts);
       const cells = S.T.pathFrom(S.grid, res.prev, b.lat, b.lon).reverse();
       if (cells.length < 2) {
         S.auto.set(key, { failed: true });
-        log('C', `No path under the ${params.blockSlopeDeg}° slope limit was found for a leg of ${Math.round(direct)} m; the straight line is shown instead`);
+        log('W', `No walkable path under the ${params.blockSlopeDeg}° slope limit was found within ${Math.round(P.SEARCH_MAX_S / 60)} min of walking for a leg of ${Math.round(direct)} m. The straight line shown is not a validated route.`);
       } else {
         const pts = [{ lat: a.lat, lon: a.lon }, ...cells.slice(1, -1), { lat: b.lat, lon: b.lon }];
         let d = 0;
@@ -159,7 +186,7 @@ function findPaths(render) {
           if (i) d += distM(pts[i - 1], p);
           return { lat: p.lat, lon: p.lon, elev: S.T.elevAt(S.grid, p.lat, p.lon), distM: d };
         });
-        S.auto.set(key, { path, line: path.map((p) => [p.lat, p.lon]) });
+        S.auto.set(key, { path, line: path.map((p) => [p.lat, p.lon]), explain: explain(a, b, path, res, params, blocked) });
         log('status', `Path found over terrain: ${Math.round(d)} m against ${Math.round(direct)} m in a straight line`);
       }
     } catch (err) {
@@ -170,6 +197,39 @@ function findPaths(render) {
   });
 }
 
+// Numbers behind a found path: what the straight line would have crossed, and what each costs in time.
+function explain(a, b, path, res, params, blocked) {
+  const g = S.grid;
+  const limitDeg = params.blockSlopeDeg;
+  const line = S.T.sampleLine(g, a, b, Math.min(g.dx, g.dy));
+  let over = 0;
+  let koz = 0;
+  let time = 0;
+  const bad = [];        // stretches of the straight line that cannot be walked, for the map
+  let run = null;
+  for (let i = 1; i < line.length; i++) {
+    const seg = line[i].distM - line[i - 1].distM;
+    const c = S.T.cellOf(g, line[i].lat, line[i].lon);
+    const idx = c.row * g.w + c.col;
+    const steep = c.inside && S.slope[idx] > limitDeg;
+    const inKoz = !!(blocked && c.inside && blocked[idx]);
+    if (steep) over += seg;
+    if (inKoz) koz += seg;
+    if (steep || inKoz) { if (!run) { run = [[line[i - 1].lat, line[i - 1].lon]]; bad.push(run); } run.push([line[i].lat, line[i].lon]); } else run = null;
+    const deg = (Math.atan2(line[i].elev - line[i - 1].elev, seg || 1) * 180) / Math.PI;
+    const v = SIM.paceAndPower(deg, params).speedMs;
+    time += v > 0 ? seg / v : Infinity;
+  }
+  const end = S.T.cellOf(g, b.lat, b.lon);
+  let maxDeg = 0;
+  for (let i = 1; i < path.length; i++) {
+    const seg = path[i].distM - path[i - 1].distM;
+    if (seg > 0) maxDeg = Math.max(maxDeg, Math.abs((Math.atan2(path[i].elev - path[i - 1].elev, seg) * 180) / Math.PI));
+  }
+  return { limitDeg, directM: line[line.length - 1].distM, directOverM: over, directKozM: koz, directTimeS: over || koz || !Number.isFinite(time) ? null : time,
+    pathM: path[path.length - 1].distM, pathTimeS: res.time[end.row * g.w + end.col], pathMaxDeg: maxDeg, bad, straight: [[a.lat, a.lon], [b.lat, b.lon]] };
+}
+
 // The walk-home field and the line-of-sight map both depend on where the refuge is.
 let homeRun = 0;
 async function refugeAnalyses(render) {
@@ -177,10 +237,10 @@ async function refugeAnalyses(render) {
   const run = ++homeRun;
   const ref = P.refugePt();
   const params = {};
-  for (const k of ['speedKmh', 'slopeLimitDeg']) if (Number.isFinite(S.params[k])) params[k] = S.params[k];
+  for (const k of ['speedKmh', 'emergencySpeedKmh', 'slopeLimitDeg']) if (Number.isFinite(S.params[k])) params[k] = S.params[k];
   const t0 = performance.now();
   const homeOpts = { speedBySlope: SIM.speedTable(params, true), toward: true, maxTimeS: HOME_MAX_S };
-  const blocked = kozMask();
+  const blocked = blockedMask();
   if (blocked) homeOpts.blocked = blocked;
   const [home, vis] = await Promise.all([
     call('costDistance', [{ lat: ref.lat, lon: ref.lon }], homeOpts),
@@ -253,8 +313,8 @@ async function initRasters() {
     const scenes = list.filter((r) => r.group === group);
     if (!scenes.length) continue;
     const legend = scenes[0].legend || [];
-    MV.addLayer({ id: group, title, group: 'Minerals from orbit', kind: 'fill', cat: 'other', avail: () => true, tag: 'MEASURED',
-      prov: `MRO CRISM map-projected browse products, 18 m per pixel, scenes from ${scenes.map((s) => s.acquired.slice(0, 4)).sort().filter((y, i, a) => a.indexOf(y) === i).join(' and ')}. Colour shows which absorption bands are strong, a guide to minerals, not a measurement of amount.`,
+    MV.addLayer({ id: group, title, group: 'Minerals from orbit', kind: 'fill', cat: 'other', avail: () => true, tag: 'DERIVED',
+      prov: `MRO CRISM map-projected browse products, 18 m per pixel, moved 150 to 250 m by us to line up with the base map (30 to 60 m of error remains; seams between scenes are not geology), scenes from ${scenes.map((s) => s.acquired.slice(0, 4)).sort().filter((y, i, a) => a.indexOf(y) === i).join(' and ')}. Colour shows which absorption bands are strong, a guide to minerals, not a measurement of amount.`,
       ramp: () => legend.map((l) => [`rgb(${l.rgb.join(',')})`, l.label]),
       make: () => L.layerGroup(scenes.map((s) => MV.fillLayer(s.file, s.bounds, { smooth: true, opacity: 0.8 }))) });
   }
@@ -291,15 +351,80 @@ async function initRasters() {
 // ---------- along-track science ----------
 
 async function initScience() {
-  const [dan, chemcam, apxs, sw] = await Promise.all(['dan', 'chemcam', 'apxs', 'spaceweather'].map((n) => getJSON(`data/layers/${n}.json`)));
+  const [dan, chemcam, apxs, sw, regions, geology] = await Promise.all(['dan', 'chemcam', 'apxs', 'spaceweather', 'regions', 'geology'].map((n) => getJSON(`data/layers/${n}.json`)));
   S.probeRows = [];
+  const IB = (key) => `<button class="ib" data-info="${key}" aria-label="What is this?">i</button>`;
+
+  // Named science regions along the rover's route up Mount Sharp, from NASA's own route map and mission papers.
+  if (regions) {
+    const PAL = ['#c9b458', '#8fb3d9', '#b48ad4', '#7fc8a9', '#d9a07a', '#b0b6bd', '#e08fb0', '#9ad0d6'];
+    const list = regions.regions.filter((r) => r.chain_range_m).map((r, i) => ({ ...r, col: r.colour && r.colour !== 'none' ? r.colour : PAL[i % PAL.length], len: r.chain_range_m[1] - r.chain_range_m[0] }));
+    S.science.regions = { raw: regions, list };
+    // The most specific region at a distance along the track (short ones sit inside long ones).
+    S.regionAt = (chain) => list.filter((r) => chain >= r.chain_range_m[0] && chain <= r.chain_range_m[1]).sort((a, b) => a.len - b.len)[0] || null;
+    S.chainNear = (pt, maxM) => {
+      let best = null;
+      let bd = maxM;
+      for (let i = 0; i < S.site.route.length; i += 3) {
+        const r = S.site.route[i];
+        if (Math.abs(r[1] - pt.lat) > 0.01) continue;
+        const d = distM(pt, { lat: r[1], lon: r[0] });
+        if (d < bd) { bd = d; best = r[3]; }
+      }
+      return best;
+    };
+    MV.GROUPS.includes('Science regions') || MV.GROUPS.splice(5, 0, 'Science regions');
+    MV.addLayer({ id: 'regions', title: 'Science regions on the route up Mount Sharp', group: 'Science regions', kind: 'line', cat: 'standard', avail: () => true, tag: 'DERIVED',
+      prov: 'The named regions Curiosity\'s team set out to explore, placed on the rover track from published sol ranges. Four colours are NASA\'s own from its route map; the rest are ours. Hover a stretch for its name; probe it for what there is to see.',
+      ramp: () => list.map((r) => [r.col, r.name.replace(/ \(.*/, '')]),
+      make: () => L.layerGroup([...list].sort((a, b) => b.len - a.len).map((r) => {
+        const pts = S.site.route.filter((q) => q[3] >= r.chain_range_m[0] && q[3] <= r.chain_range_m[1]).map((q) => [q[1], q[0]]);
+        return L.polyline(pts, { pane: 'lines', color: r.col, weight: 14, opacity: 0.9, lineCap: 'butt' }).bindTooltip(r.name, { sticky: true })
+          .on('click', (e) => { L.DomEvent.stopPropagation(e); emit('pick', { lat: e.latlng.lat, lon: e.latlng.lng }); });
+      })) });
+    S.probeRows.push((pt, s) => {
+      const chain = s ? s.chain_m : S.chainNear(pt, 150);
+      const r = chain === null ? null : S.regionAt(chain);
+      if (!r) return '';
+      const src = (r.sources && r.sources[0]) || null;
+      return `<div class="sub">Science region${IB('regions')}</div>${pr('Region', `<span class="t"><i style="display:inline-block;width:10px;height:10px;background:${r.col};margin-right:6px"></i>${esc(r.name)}</span>`)}
+        <div class="note" style="color:var(--text)"><b>What you would see.</b> ${esc(r.what_to_see)}<br><b>Why it matters.</b> ${esc(r.why_it_matters)}
+        <br><span class="dim">Extent on the track: ${esc(r.confidence)}.</span> ${src ? `<a href="${src.url}" target="_blank" rel="noopener">${esc(src.title)} ↗</a>` : ''}</div>`;
+    });
+  }
+
+  // The USGS global geologic map: which great unit the area belongs to. Far too coarse to guide a walk.
+  if (geology) {
+    S.science.geology = geology;
+    const inRing = (ring, lon, lat) => {
+      let inside = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i];
+        const [xj, yj] = ring[j];
+        if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    };
+    const unitAt = (pt) => geology.units.find((u) => u.rings.reduce((n, ring) => n + (inRing(ring, pt.lon, pt.lat) ? 1 : 0), 0) % 2 === 1) || null;
+    MV.GROUPS.includes('Science regions') || MV.GROUPS.splice(5, 0, 'Science regions');
+    MV.addLayer({ id: 'geology', title: 'Geologic unit (USGS global map, 1:20,000,000)', group: 'Science regions', kind: 'line', cat: 'other', avail: () => true, tag: 'MEASURED',
+      prov: 'USGS Geologic Map of Mars (Tanaka and others, 2014). It says which great unit the region belongs to and how old it is. A boundary on this map can be kilometres from where the rock really changes: not for planning a step.',
+      ramp: () => geology.units.map((u) => [u.colour, `${u.code}: ${u.name}`]),
+      make: () => L.layerGroup(geology.units.map((u) => L.polygon(u.rings.map((ring) => ring.map(([lon, lat]) => [lat, lon])), { pane: 'lines', color: '#fff', weight: 1.5, dashArray: '6 5', fillColor: u.colour, fillOpacity: 0.16, fillRule: 'evenodd', interactive: false }))) });
+    S.probeRows.push((pt) => {
+      const u = unitAt(pt);
+      if (!u) return '';
+      return `<div class="sub">Geologic unit · USGS global map${IB('geology')}</div>${pr('Unit', `<span class="t">${esc(u.code)} · ${esc(u.name)}</span>`, 'MEASURED')}${pr('Age', `<span class="t">${esc(u.age)}</span>`)}
+        <div class="note">${esc(u.interpretation)} <span class="dim">Mapped at 1:20,000,000: a guide to the region, not to this spot.</span></div>`;
+    });
+  }
 
   if (dan) {
     const F = Object.fromEntries(dan.fields.map((f, i) => [f, i]));
     const pts = dan.points.map((p) => ({ lat: p[F.lat], lon: p[F.lon], water: p[F.water_wt_pct], waterErr: p[F.water_err], cl: p[F.cl_wt_pct], clErr: p[F.cl_err], member: dan.members[p[F.member_index]], chain: p[F.chain_m] }));
     S.science.dan = { pts, meta: dan };
     const endLat = pts[pts.length - 1].lat;
-    MV.addLayer({ id: 'dan', title: 'Subsurface water (DAN neutron instrument)', group: 'Measured by Curiosity', kind: 'point', cat: 'standard', avail: () => true, tag: 'MEASURED', minZoom: 12.5, swatch: 'dots',
+    MV.addLayer({ id: 'dan', title: 'Subsurface water (DAN neutron instrument)', group: 'Measured by Curiosity', kind: 'point', cat: 'standard', avail: () => true, tag: 'MEASURED', minZoom: 14, swatch: 'dots',
       prov: `Water-equivalent hydrogen in roughly the top metre of ground, ${pts.length.toLocaleString('en-GB')} points along the track up to sol 3333. Nikiforov et al. 2022, Zenodo, CC BY 4.0. No values south of ${endLat.toFixed(2)}°.`,
       ramp: () => [[RAMP[0], 'under 2 wt%'], [RAMP[1], '2 to 3'], [RAMP[2], '3 to 4'], [RAMP[3], '4 to 5'], [RAMP[4], 'over 5 wt%']],
       make: () => MV.trackPointsLayer(pts, (p) => p.water, [2, 3, 4, 5], (p) => emit('pick', { lat: p.lat, lon: p.lon })) });
@@ -311,7 +436,7 @@ async function initScience() {
         const d = distM(pt, p);
         if (d < bd) { bd = d; best = p; }
       }
-      const head = '<div class="sub">Under the surface · DAN</div>';
+      const head = '<div class="sub">Under the surface · DAN<button class="ib" data-info="dan" aria-label="What is this?">i</button></div>';
       if (!best) return head + pr('Water, top metre', missing(pt.lat < endLat ? 'no DAN data here: the table ends at sol 3333' : `no DAN point within ${DAN_NEAR_M} m`));
       return head + pr('Water, top metre', `${best.water.toFixed(1)} ± ${best.waterErr.toFixed(1)} wt%`, 'MEASURED')
         + (best.cl !== null ? pr('Chlorine', `${best.cl.toFixed(2)} ± ${best.clErr.toFixed(2)} wt%`, 'MEASURED') : '')
@@ -334,7 +459,7 @@ async function initScience() {
       if (!spots || !spots.length) return '';
       const sp = spots[0];
       const vals = OX.filter((k) => typeof sp[k] === 'number').map((k) => `${k.replace(/(\d)/g, '<sub>$1</sub>')} ${sp[k].toFixed(k === 'Cl' ? 2 : 1)}`).join(' · ');
-      return `<div class="sub">Chemistry · APXS${TAG('MEASURED')}</div>${pr(esc(sp.target || `Sol ${sp.sol}`), `${vals} wt%`)}${spots.length > 1 ? `<div class="note">${spots.length} spots measured here; the first is shown.</div>` : ''}`;
+      return `<div class="sub">Chemistry · APXS${TAG('MEASURED')}<button class="ib" data-info="apxs" aria-label="What is this?">i</button></div>${pr(esc(sp.target || `Sol ${sp.sol}`), `${vals} wt%`)}${spots.length > 1 ? `<div class="note">${spots.length} spots measured here; the first is shown.</div>` : ''}`;
     });
   }
 
@@ -344,25 +469,57 @@ async function initScience() {
       const c = s ? chemcam.stops[s.id] : null;
       if (!c) return '';
       const names = c.targets.map(([name]) => esc(String(name).replace(/_/g, ' '))).join(', ');
-      return `<div class="sub">Laser targets · ChemCam${TAG('MEASURED')}</div><div class="note">${c.n} rock and soil target${c.n === 1 ? '' : 's'} examined from here: ${names}${c.n > c.targets.length ? ', …' : ''}.</div>`;
+      return `<div class="sub">Laser targets · ChemCam${TAG('MEASURED')}<button class="ib" data-info="chemcam" aria-label="What is this?">i</button></div><div class="note">${c.n} rock and soil target${c.n === 1 ? '' : 's'} examined from here: ${names}${c.n > c.targets.length ? ', …' : ''}.</div>`;
     });
   }
 
   if (sw) {
     const now = Date.now();
-    // An eruption that arrived within the last day is still passing; later ones count down in days.
-    const DAY = 86400000;
-    const events = (sw.mars_impacts || []).map((m) => ({ t: Date.parse(m.arrival_utc.replace('Z', ':00Z')), glancing: !!m.glancing_blow }))
-      .filter((m) => Number.isFinite(m.t) && m.t >= now - DAY).sort((a, b) => a.t - b.t);
-    const next = events[0];
-    const soon = events.filter((m) => m.t <= (next ? next.t : 0) + DAY);
-    const ageDays = Math.round((now - Date.parse(sw.fetched_utc)) / DAY);
-    S.science.spaceweather = { raw: sw, env: {
-      marsImpactWithinDays: next ? Math.max(0, Math.round(((next.t - now) / DAY) * 10) / 10) : null,
-      glancing: soon.length > 0 && soon.every((m) => m.glancing),
-      note: `NASA DONKI WSA-Enlil forecasts, snapshot ${sw.fetched_utc.slice(0, 10)}${ageDays > 3 ? `, ${ageDays} days old` : ''}: ${sw.count_mars} of ${sw.count_all} model runs in 60 days reached Mars.`,
-    } };
+    const snapshot = { fetched: Date.parse(sw.fetched_utc), live: false,
+      events: (sw.mars_impacts || []).map((m) => ({ t: Date.parse(m.arrival_utc.replace('Z', ':00Z')), glancing: !!m.glancing_blow })) };
+    S.science.spaceweather = { raw: sw, env: spaceWeatherEnv(snapshot) };
+    liveSpaceWeather().then((live) => { if (live) { S.science.spaceweather.env = spaceWeatherEnv(live); log('status', `Space weather: live NASA DONKI forecasts read, ${live.events.length} model runs reaching Mars in the last 12 days`); emit('data'); } });
   }
+}
+
+// Forecast data older than this cannot say what is on its way to Mars: the rule becomes "not evaluated".
+const FORECAST_MAX_AGE_H = 48;
+const DAY = 86400000;
+function spaceWeatherEnv({ fetched, events, live }) {
+  const now = Date.now();
+  // An eruption that arrived within the last day is still passing; later ones count down in days.
+  const ahead = events.filter((m) => Number.isFinite(m.t) && m.t >= now - DAY).sort((a, b) => a.t - b.t);
+  const next = ahead[0];
+  const soon = ahead.filter((m) => m.t <= (next ? next.t : 0) + DAY);
+  const ageH = (now - fetched) / 3600000;
+  const stale = !(ageH <= FORECAST_MAX_AGE_H);
+  const age = ageH < 2 ? 'read just now' : ageH < 48 ? `${Math.round(ageH)} h old` : `${Math.round(ageH / 24)} days old`;
+  return {
+    marsImpactWithinDays: next ? Math.max(0, Math.round(((next.t - now) / DAY) * 10) / 10) : null,
+    glancing: soon.length > 0 && soon.every((m) => m.glancing),
+    stale,
+    note: `NASA DONKI WSA-Enlil model forecasts, ${live ? 'live feed' : 'stored snapshot'}, ${age}${stale ? `; older than ${FORECAST_MAX_AGE_H} h, so not usable` : ''}.`,
+  };
+}
+// Ask NASA's DONKI service for the latest forecasts. The public demonstration key allows only a few
+// requests an hour, so an answer is kept for three hours. Returns null if NASA cannot be reached.
+async function liveSpaceWeather() {
+  const KEY = 'tenacity.donki';
+  try {
+    const kept = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (kept && Date.now() - kept.fetched < 3 * 3600000) return { ...kept, live: true };
+  } catch { /* fetch again */ }
+  try {
+    const d = (offset) => new Date(Date.now() + offset * DAY).toISOString().slice(0, 10);
+    const res = await fetch(`https://api.nasa.gov/DONKI/WSAEnlilSimulations?startDate=${d(-12)}&endDate=${d(1)}&api_key=DEMO_KEY`, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return null;
+    const sims = await res.json();
+    if (!Array.isArray(sims)) return null;
+    const events = sims.flatMap((sim) => (sim.impactList || []).filter((i) => i.location === 'Mars').map((i) => ({ t: Date.parse(i.arrivalTime), glancing: !!i.isGlancingBlow }))).filter((m) => Number.isFinite(m.t));
+    const out = { fetched: Date.now(), events };
+    try { localStorage.setItem(KEY, JSON.stringify(out)); } catch { /* storage may be blocked */ }
+    return { ...out, live: true };
+  } catch { return null; }
 }
 
 // What is drawn on the map and where it came from, for the Sources tab.
@@ -380,14 +537,17 @@ const DATA_SOURCES = [
   ['Solar storm forecasts', 'NASA VALUE', 'NASA CCMC DONKI, WSA-Enlil model runs (forecasts, not measurements at Mars)', 'https://ccmc.gsfc.nasa.gov/tools/DONKI/'],
   ['Mars time, season, sunrise and sunset', 'DERIVED', 'Mars24 algorithm, Allison and McEwen 2000, NASA GISS', 'https://www.giss.nasa.gov/tools/mars24/help/algorithm.html'],
   ['Where the rovers are now', 'MEASURED', 'NASA/JPL-Caltech rover position feeds, read when the page loads', 'https://science.nasa.gov/mission/mars-2020-perseverance/location-map/'],
-  ['Whole-planet basemap', 'MEASURED', 'OpenPlanetaryMap, from NASA/USGS data', 'https://www.openplanetary.org/opm'],
+  ['Whole-planet basemap', 'MEASURED', 'OpenPlanetaryMap, from NASA/USGS data', 'https://github.com/openplanetary/opm'],
 ];
 
 // Loads everything and returns the function to call when the refuge or the walking pace changes.
-export async function initData({ render }) {
+export async function initData({ render, mark = () => {} }) {
   S.dataSources = DATA_SOURCES;
   await Promise.all([initScience().then(render), initRasters().then(() => emit('layers'))]);
   log('status', `Science layers loaded: ${Object.keys(S.science).join(', ') || 'none'}; ${S.rasters.length} picture layers`);
+  mark('science', 'ok');
+  mark('terrain', 'on');
   await initTerrain(render);
+  mark('terrain', 'ok');
   return () => refugeAnalyses(render);
 }

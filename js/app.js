@@ -2,33 +2,40 @@
 // The plan lives in plan.js, the walk simulation in sim.js, the map and its layers in mapview.js.
 import * as M from './model.js';
 import { pickLandscape, compass } from './photo.js';
-import { S, C, RAMP, $, esc, ll, clamp, on, log, fmtM, fmtMin, fmtHM, pet, clockH, parseClock, fmtLat, fmtLon, localM, distM, headingDeg, MARS_HOUR_S } from './state.js';
+import { S, C, RAMP, $, esc, ll, clamp, on, emit, log, fmtM, fmtMin, fmtHM, pet, clockH, parseClock, fmtLat, fmtLon, localM, distM, headingDeg, MARS_HOUR_S } from './state.js';
 import * as P from './plan.js';
 import * as MV from './mapview.js';
 import * as SIM from './sim.js';
 import * as SUN from './sun.js';
 import { initData, playheadMoved } from './data.js';
+import * as UI from './ui.js';
+import { infoOf } from './info.js';
+import * as F from './features.js';
 
 const STORE = 'tenacity.v3';
 const PHOTO_FEED = 'https://mars.nasa.gov/rss/api/?feed=raw_images&category=msl&feedtype=json&num=500&sol=';
-const LETTER = { warning: 'W', caution: 'C', advisory: 'A' };
-const RANK = { pass: 0, advisory: 1, caution: 2, warning: 3 };
-const TABS = [['sequence', 'Sequence'], ['timeline', 'Timeline'], ['profile', 'Profile'], ['layers', 'Layers'], ['rovers', 'Rovers'], ['sources', 'Sources']];
+const LETTER = { warning: 'W', caution: 'C', advisory: 'A', unknown: 'NE' };      // NE: not evaluated
+const FCLASS = { warning: 'fW', caution: 'fC', advisory: 'fA', unknown: 'fS' };
+const RANK = { pass: 0, advisory: 1, caution: 2, unknown: 3, warning: 4 };
+const CRITICAL = ['FR-01', 'FR-02', 'FR-04'];   // a plan is never GO while one of these is not evaluated
+const TABS = [['sequence', 'Sequence'], ['timeline', 'Timeline'], ['profile', 'Profile'], ['layers', 'Layers'], ['notes', 'Notes'], ['history', 'History'], ['rovers', 'Rovers'], ['sources', 'Sources']];
+const IB = (key) => `<button class="ib" data-info="${key}" aria-label="What is this?">i</button>`;
 const TAG = (t) => `<span class="tag">${t}</span>`;
 const CONS = { o2: 'Oxygen', co2: 'CO₂ made', water: 'Cooling water', battery: 'Battery' };
-const field = (level) => (LETTER[level] ? `<b class="f f${LETTER[level]}">${LETTER[level]}</b>` : '');
+const field = (level) => (LETTER[level] ? `<b class="f ${FCLASS[level]}" title="${{ warning: 'Warning: blocks the walk', caution: 'Caution', advisory: 'Advisory', unknown: 'Not evaluated' }[level]}">${LETTER[level]}</b>` : '');
 
 // What the crew can change before a walk (INCONS: initial conditions). Defaults come from sim.js.
 const PARAMS = [
   ['egress', 'Leave refuge', 'LMST', 'clock'],
   ['sunset', 'Sunset', 'LMST', 'clock'],
-  ['speedKmh', 'Walking speed, level ground', 'km/h', 0.1],
-  ['o2StartKg', 'Oxygen at egress', 'kg', 0.01],
-  ['reserveMin', 'Reserve kept', 'min', 5],
-  ['emergencyReturnMin', 'Suit-failure return limit', 'min', 5],
-  ['slopeLimitDeg', 'Slope limit', '°', 1],
-  ['maxEvaH', 'Longest EVA', 'h', 0.5],
-];
+  ['speedKmh', 'Walking speed, level ground', 'km/h', 0.1, 0.5, 6],
+  ['emergencySpeedKmh', 'Emergency return pace', 'km/h', 0.1, 0.5, 6],
+  ['o2StartKg', 'Oxygen at egress', 'kg', 0.01, 0.1, 2],
+  ['reserveMin', 'Reserve kept', 'min', 5, 0, 120],
+  ['emergencyReturnMin', 'Suit-failure return limit', 'min', 5, 10, 120],
+  ['slopeLimitDeg', 'Slope limit', '°', 1, 5, 30],
+  ['maxEvaH', 'Longest EVA', 'h', 0.5, 1, 12],
+  ['crew', 'Crew on the walk', 'people', 1, 1, 6]];
 
 // ---------- state ----------
 
@@ -41,16 +48,28 @@ function loadSaved() {
     const raw = JSON.parse(localStorage.getItem(STORE) || 'null');
     if (!raw || !P.valid(raw.plan)) return false;
     S.trip = raw.trip;
-    S.plan = raw.plan;
-    S.params = { ...S.params, ...raw.params };
+    S.plan = P.clean(raw.plan);
+    S.params = cleanParams(raw.params);
     return true;
   } catch { return false; }
 }
 
 const trip = () => S.cfg.trips.find((t) => t.id === S.trip);
 
+// Whatever came from storage or a file: keep only known keys, as numbers inside their bounds, clocks as HH:MM.
+function cleanParams(raw) {
+  const out = defaultParams();
+  for (const [key, , , kind, lo, hi] of PARAMS) {
+    const v = raw ? raw[key] : undefined;
+    if (kind === 'clock') { if (typeof v === 'string' && (parseClock(v) !== null || (key === 'sunset' && v === ''))) out[key] = v; continue; }
+    const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+    if (typeof n === 'number' && Number.isFinite(n)) out[key] = key === 'crew' ? clamp(Math.round(n), lo, hi) : clamp(n, lo, hi);
+  }
+  return out;
+}
+
 function defaultParams() {
-  const p = { egress: '09:00', sunset: '' };
+  const p = { egress: '09:00', sunset: '', crew: 2 };
   for (const [key] of PARAMS) if (SIM.SUIT[key]) p[key] = SIM.SUIT[key].value;
   return p;
 }
@@ -71,6 +90,7 @@ function environment() {
   S.sun = SUN.marsSun(Date.now(), ref.lat, ref.lon);
   const sunset = parseClock(S.params.sunset) ?? S.sun.sunsetLmstH;
   const env = { sun: { sunsetLmstH: sunset, sunriseLmstH: S.sun.sunriseLmstH }, looseAt: (lat, lon) => looseClass(lat, lon) === 2 };
+  if (S.slope && S.grid) env.groundSlopeAt = (lat, lon) => gridValue(S.slope, lat, lon);
   if (S.home && S.grid) {
     env.homeTimeS = (lat, lon) => {
       const c = S.T.cellOf(S.grid, lat, lon);
@@ -98,12 +118,86 @@ let lastVerdict = '';
 function recompute() {
   S.legs = P.buildLegs();
   const egress = parseClock(S.params.egress) ?? 9;
-  S.sim = SIM.simulate(P.buildSimPlan(S.legs, egress), simParams(), environment());
+  const simPlan = P.buildSimPlan(S.legs, egress);
+  const env = environment();
+  S.sim = SIM.simulate(simPlan, simParams(), env);
   S.tS = clamp(S.tS, 0, S.sim.totals.durS);
   keepOutRule();
+  crewRule();
+  finishRules(simPlan, env);
   const v = S.sim.verdict;
-  const line = `Simulation: ${v.go ? 'GO' : 'NO-GO'}, limiting rule ${v.limiting}, margin ${signedMin(v.marginMin)}`;
+  const line = `Simulation: ${v.label}, limiting rule ${v.limiting}, margin ${signedMin(v.marginMin)}`;
   if (line !== lastVerdict) { log('status', line); lastVerdict = line; }
+}
+
+// Rules the simulation could not evaluate are listed as "not evaluated", never left out, and the
+// verdict takes them into account. Also: the same walk at a slower pace must still hold.
+function finishRules(simPlan, env) {
+  const sim = S.sim;
+  const has = (id) => sim.rules.some((r) => r.id === id);
+  const add = (id, title, level, text, extra = {}) => sim.rules.push({ id, title, level, text, value: null, limit: null, units: '', stepIndex: null, segments: [], ...extra });
+  const loading = !S.ready;
+  if (!has('FR-06')) add('FR-06', 'Line of sight to refuge', 'unknown', loading ? 'Not evaluated yet: the terrain engine is still loading.' : 'Not evaluated: the terrain engine is not available.');
+  if (!has('FR-10')) add('FR-10', 'Space weather', 'unknown', loading ? 'Not evaluated yet: the forecast data are still loading.' : 'Not evaluated: no space-weather forecast data could be loaded.');
+  if (!has('FR-11')) add('FR-11', 'Loose ground', 'unknown', 'Not evaluated: no ground data.');
+  if (!has('FR-12')) add('FR-12', 'Keep-out zones', 'pass', 'No keep-out zones are set.');
+
+  // Slope: without the elevation grid, ground away from the rover track has no slope at all.
+  const fr4 = ruleOf('FR-04');
+  const offTrack = S.legs.filter((l) => l.mode !== 'track' && l.lengthM > 1);
+  const noRoute = S.legs.filter((l) => l.noRoute);
+  if (fr4 && noRoute.length) {
+    fr4.level = 'warning';
+    fr4.text = `No walkable path under the ${S.params.slopeLimitDeg}° limit was found for ${noRoute.map((l) => l.id).join(', ')} within ${Math.round(P.SEARCH_MAX_S / 60)} min of walking. The straight line shown is not a validated route.`;
+    fr4.stepIndex = sim.steps.findIndex((st) => st.id === noRoute[0].id);
+  } else if (fr4 && !S.slope && fr4.level !== 'warning') {
+    fr4.level = 'unknown';
+    fr4.text = offTrack.length
+      ? `Not evaluated for ${offTrack.map((l) => l.id).join(', ')}: without the elevation grid the ground off the rover track has no slope data${loading ? ' (still loading)' : ''}.`
+      : `Slope across the path is not evaluated: the elevation grid is ${loading ? 'still loading' : 'not available'}. Along the rover track the steepest is ${Number(fr4.value || 0).toFixed(1)}°.`;
+  }
+  if (S.legs.some((l) => l.searching)) { const r = ruleOf('FR-04'); if (r && r.level !== 'warning') { r.level = 'unknown'; r.text = 'Not evaluated yet: a path over the terrain is still being searched.'; } }
+
+  // Daylight judged against a sunset typed by hand is flagged as such.
+  const fr3 = ruleOf('FR-03');
+  if (fr3 && S.params.sunset) { fr3.text += ' Sunset was entered by hand, not computed.'; if (fr3.level === 'pass') fr3.level = 'advisory'; }
+
+  // FR-14: the walk must still hold at the slow end of the tool's own duration range.
+  const p = simParams();
+  const factor = SIM.SUIT.slowWalkFactor.value;
+  const slow = SIM.simulate(simPlan, { ...p, speedKmh: (p.speedKmh ?? SIM.SUIT.speedKmh.value) / factor }, env);
+  const timed = ['FR-02', 'FR-03', 'FR-07', 'FR-08', 'FR-09'];
+  const fails = slow.rules.filter((r) => timed.includes(r.id) && r.level === 'warning' && (ruleOf(r.id) || {}).level !== 'warning');
+  const slowMargins = slow.rules.filter((r) => timed.includes(r.id) && Number.isFinite(r.marginMin));
+  const slowMin = slowMargins.length ? Math.min(...slowMargins.map((r) => r.marginMin)) : null;
+  add('FR-14', 'Slow-pace case', fails.length ? 'warning' : 'pass', fails.length
+    ? `Walking ${factor} times slower (the pace Apollo crews averaged), the walk lasts ${fmtHM(slow.totals.durS)} and ${fails.map((r) => r.id).join(', ')} fail${fails.length === 1 ? 's' : ''}.`
+    : `Walking ${factor} times slower (the pace Apollo crews averaged), the walk lasts ${fmtHM(slow.totals.durS)} and every timed rule still holds${slowMin !== null ? `, tightest by ${Math.round(slowMin)} min` : ''}.`,
+  { marginMin: slowMin });
+
+  // FR-15: where the pace model crawls, its times mean little.
+  const crawlS = sim.samples.reduce((t, q, i, a) => (i && sim.steps[q.stepIndex].type === 'walk' && q.speedMs > 0 && q.speedMs < 0.5 / 3.6 ? t + (q.tS - a[i - 1].tS) : t), 0);
+  add('FR-15', 'Pace on slopes', crawlS > 300 ? 'caution' : 'pass', crawlS > 300
+    ? `${fmtMin(crawlS)} of the walk is on slopes where the pace model drops under 0.5 km/h. Times there are very uncertain; consider a gentler path.`
+    : 'No long stretch where the pace model drops under 0.5 km/h.');
+
+  sim.rules.sort((a, b) => a.id.localeCompare(b.id));
+  for (const r of sim.rules) {
+    if (r.level === 'pass') continue;
+    const hit = (r.segments || []).length ? r.segments.map((x) => x.stepIndex) : (r.stepIndex === null || r.stepIndex === undefined || r.stepIndex < 0 ? [] : [r.stepIndex]);
+    for (const i of new Set(hit)) { const st = sim.steps[i]; if (st && !(st.flags ||= []).includes(r.id)) st.flags.push(r.id); }
+  }
+
+  // The verdict. GO needs every rule evaluated that could hide a hazard, and no warning.
+  const v = sim.verdict;
+  const warnings = sim.rules.filter((r) => r.level === 'warning');
+  const unknownCritical = sim.rules.filter((r) => r.level === 'unknown' && CRITICAL.includes(r.id));
+  if (slowMin !== null && Number.isFinite(v.marginMin) && slowMin < v.marginMin) { v.marginMin = slowMin; v.limiting = 'FR-14'; }
+  v.blocking = warnings.map((r) => r.id);
+  v.state = !S.plan.stations.length ? 'noplan' : warnings.length ? 'nogo' : loading ? 'provisional' : unknownCritical.length ? 'notevaluated' : 'go';
+  v.go = v.state === 'go';
+  v.label = { go: 'GO', nogo: 'NO-GO', provisional: 'PROVISIONAL', notevaluated: 'NOT EVALUATED', noplan: 'NO WALK PLANNED' }[v.state];
+  v.unknown = sim.rules.filter((r) => r.level === 'unknown').map((r) => r.id);
 }
 
 // FR-12: no part of the walk may pass through a keep-out zone.
@@ -124,10 +218,13 @@ function keepOutRule() {
   sim.rules.push({ id: 'FR-12', title: 'Keep-out zones', level: bad ? 'warning' : 'pass', value: segments.length, limit: 0, units: 'crossings',
     text: bad ? `The walk passes through a keep-out zone on ${[...new Set(segments.map((s) => sim.steps[s.stepIndex].id))].join(', ')}.` : `The walk stays clear of ${zones.length} keep-out zone${zones.length === 1 ? '' : 's'}.`,
     stepIndex: bad ? segments[0].stepIndex : null, segments });
-  if (bad) {
-    sim.verdict.go = false;
-    segments.forEach((s) => { const st = sim.steps[s.stepIndex]; (st.flags ||= []).includes('FR-12') || st.flags.push('FR-12'); });
-  }
+}
+
+// FR-13: NASA plans surface walks in pairs.
+function crewRule() {
+  const n = clamp(Math.round(S.params.crew ?? 2), 1, 6);
+  S.sim.rules.push({ id: 'FR-13', title: 'Buddy rule', level: n >= 2 ? 'pass' : 'caution', value: n, limit: 2, units: 'people',
+    text: n >= 2 ? `${n} crew walk together; consumables are counted per person.` : 'One person walks alone. NASA plans surface walks in pairs.', stepIndex: null, segments: [] });
 }
 
 const signedMin = (m) => (Number.isFinite(m) ? `${m >= 0 ? '+' : '−'}${Math.abs(Math.round(m))} min` : 'n/a');
@@ -159,22 +256,29 @@ function gridValue(arr, lat, lon) {
 function renderTitle() {
   const v = S.sim.verdict;
   const t = S.sim.totals;
-  $('#trip').innerHTML = S.cfg.trips.map((x) => `<option value="${x.id}" ${x.id === S.trip ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  $('#trip').innerHTML = `<optgroup label="Ready-made walks">${S.cfg.trips.map((x) => `<option value="${x.id}" ${x.id === S.trip ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</optgroup>
+    ${S.saved.length ? `<optgroup label="My plans">${S.saved.map((r) => `<option value="saved:${r.id}" ${`saved:${r.id}` === S.trip ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</optgroup>` : ''}`;
   $('#mode').innerHTML = [['sketch', 'Sketch', 'Each click on the map adds a station'], ['edit', 'Edit', 'Select, probe and adjust'], ['lock', 'Lock', 'Read-only, for following the walk']]
     .map(([id, label, tip]) => `<button data-act="mode" data-id="${id}" class="${S.mode === id ? 'on' : ''}" title="${tip}" aria-pressed="${S.mode === id}">${label}</button>`).join('');
   const lim = ruleOf(v.limiting);
   const blockers = S.sim.rules.filter((r) => r.level === 'warning');
-  $('#verdict').innerHTML = `<span class="${v.go ? 'go' : 'nogo'}">${v.go ? 'GO' : 'NO-GO'}</span>
-    ${blockers.length ? `<span class="k">Blocked by</span><span class="t">${blockers.map((r) => `${r.id} ${esc(r.title)}`).join(', ')}</span>` : ''}
-    <span class="k">Margin</span><span class="v">${signedMin(v.marginMin)}</span>
+  const cls = { go: 'go', nogo: 'nogo', provisional: 'prov', notevaluated: 'prov', noplan: 'prov' }[v.state];
+  const why = v.state === 'provisional' ? 'the terrain engine and forecast data are still loading; some rules are not evaluated yet'
+    : v.state === 'notevaluated' ? `${v.unknown.filter((id) => CRITICAL.includes(id)).join(', ')} could not be evaluated, so this plan is not cleared`
+      : v.state === 'noplan' ? 'add a station to plan a walk' : '';
+  $('#verdict').innerHTML = `<span class="${cls}">${v.label}</span>
+    ${blockers.length ? `<span class="k">Blocked by</span><span class="v" title="${esc(blockers.map((r) => `${r.id} ${r.title}`).join(', '))}">${blockers.map((r) => r.id).join(', ')}</span><span class="t opt">${esc(blockers[0].title)}${blockers.length > 1 ? ` and ${blockers.length - 1} more` : ''}</span>` : ''}
+    ${why ? `<span class="t">${why}</span>` : ''}
+    ${v.state === 'noplan' ? '' : `<span class="k">Margin</span><span class="v">${signedMin(v.marginMin)}</span>
     <span class="k${blockers.length ? ' opt' : ''}">Limiting rule</span><span class="t${blockers.length ? ' opt' : ''}">${esc(v.limiting || '')} ${lim ? esc(lim.title) : ''}</span>
-    <span class="k opt">EVA</span><span class="v opt">${fmtHM(t.durS)}</span>
-    <span class="k opt">Back</span><span class="v opt">${esc(t.backLmst || '')} LMST</span>`;
+    <span class="k opt" title="Durations are in Earth (SI) hours; clocks are Mars local time">EVA</span><span class="v opt" title="Earth (SI) hours and minutes">${fmtHM(t.durS)}</span>
+    <span class="k opt">Back</span><span class="v opt">${esc(t.backLmst || '')} LMST</span>`}${IB('verdict')}`;
   const count = (level) => S.sim.rules.filter((r) => r.level === level).length;
-  $('#alerts').innerHTML = `<span class="k">Alerts</span>${['warning', 'caution', 'advisory'].map((lv) => {
+  $('#alerts').innerHTML = `<span class="k">Alerts</span>${['warning', 'caution', 'advisory', 'unknown'].map((lv) => {
     const n = count(lv);
-    return `<span class="f ${n ? `f${LETTER[lv]}` : 'f0'}" title="${n} ${lv}${n === 1 ? '' : 's'}">${LETTER[lv]} ${n}</span>`;
+    return `<span class="f ${n ? FCLASS[lv] : 'f0'}" title="${n} ${lv === 'unknown' ? 'not evaluated' : `${lv}${n === 1 ? '' : 's'}`}">${LETTER[lv]} ${n}</span>`;
   }).join('')}`;
+  $('#trip').disabled = locked();
 }
 
 // ---------- activity list ----------
@@ -184,22 +288,25 @@ const locked = () => S.mode === 'lock';
 const dis = () => (locked() ? 'disabled' : '');
 
 function inconsCard() {
-  const rows = PARAMS.map(([key, label, unit, kind]) => {
+  const def = defaultParams();
+  const rows = PARAMS.map(([key, label, unit, kind, lo, hi]) => {
     const suit = SIM.SUIT[key];
-    const tag = key === 'sunset' ? 'DERIVED' : suit ? suit.tag : 'ASSUMED';
+    const edited = key === 'sunset' ? !!S.params.sunset : key === 'egress' || key === 'crew' ? false : S.params[key] !== def[key];
+    const tag = edited ? 'MANUAL' : key === 'sunset' ? 'DERIVED' : key === 'egress' || key === 'crew' ? 'YOUR CHOICE' : suit ? suit.tag : 'ASSUMED';
     const val = key === 'sunset' && !S.params.sunset ? clockH(S.sun.sunsetLmstH) : S.params[key];
     const input = kind === 'clock'
       ? `<input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="${esc(val ?? '')}" data-param="${key}" aria-label="${label}" ${dis()}>`
-      : `<input type="number" step="${kind}" min="0" value="${val ?? ''}" data-param="${key}" aria-label="${label}" ${dis()}>`;
+      : `<input type="number" step="${kind}" min="${lo}" max="${hi}" value="${esc(val ?? '')}" data-param="${key}" aria-label="${label}" title="${lo} to ${hi} ${unit}" ${dis()}>`;
     return `<span class="k">${label}</span><span class="v">${input} ${unit}${TAG(tag)}</span>`;
   }).join('');
   const ref = P.refugePt();
   return `<div class="card">
-    <span class="k">Refuge</span><span>${esc(ref.name)}</span>
+    <span class="wide" style="display:flex;justify-content:space-between"><b>Initial conditions</b>${IB('incons')}</span>
+    <span class="k">Refuge</span><span>${esc(ref.name)} (pressurised rover)</span>
     <span class="k">Position</span><span class="v">${fmtLat(ref.lat)}, ${fmtLon(ref.lon)}</span>
     ${rows}
-    <span class="wide dim">Sunset is worked out for today's season at the refuge unless you type one. The refuge is a pressurised rover: probe a point on the map to park it elsewhere.</span>
-    <div class="acts"><button class="btn pl" data-act="reset" ${dis()}>Reset plan and INCONS</button></div>
+    <span class="wide dim">The plan is for today, ${new Date().toISOString().slice(0, 10)} UTC: Sun, season and space weather are today's. Sunset is computed for the refuge unless you type one. Durations are in Earth (SI) hours; clocks are Mars local time. The refuge is a pressurised rover: probe a point on the map to park it elsewhere.</span>
+    <div class="acts"><button class="btn" data-act="reset" ${dis()}>Reset plan and INCONS</button></div>
   </div>`;
 }
 
@@ -207,12 +314,12 @@ function legCard(leg, step, isReturn) {
   const canTrack = leg.from.chain !== null && leg.dest.chain !== null;
   const which = isReturn ? 'ret' : leg.station;
   return `<div class="card">
-    <span class="k">Goal x, y</span><span class="v">${leg.goal.x.toFixed(1)}, ${leg.goal.y.toFixed(1)} m</span>
-    <span class="k">Frame</span><span>SITE, origin at the refuge</span>
+    <span class="k">Goal east, north</span><span class="v">${leg.goal.x.toFixed(1)}, ${leg.goal.y.toFixed(1)} m</span>
+    <span class="k">Frame</span><span>Local, origin at the refuge</span>
     <span class="k">Heading</span><span class="v">${String(Math.round(leg.headingDeg)).padStart(3, '0')}° true</span>
     <span class="k">Length</span><span class="v">${fmtM(leg.lengthM)}</span>
     <span class="k">Climb / drop</span><span class="v">↑${Math.round(step.climbM)} m ↓${Math.round(step.dropM)} m</span>
-    <span class="k">Steepest</span><span class="v">${step.maxSlopeDeg.toFixed(0)}° ${step.maxSlopeDeg > (S.params.slopeLimitDeg ?? 20) ? field('warning') : ''}</span>
+    <span class="k">Steepest ground</span><span class="v">${step.maxSlopeDeg.toFixed(0)}° ${step.maxSlopeDeg > (S.params.slopeLimitDeg ?? 20) ? field('warning') : ''}</span>
     <span class="k">Walk time</span><span class="v">${fmtMin(step.t1S - step.t0S)}</span>
     <span class="k">Path</span><span><select data-legmode="${which}" aria-label="How this leg is walked" ${dis()}>
       <option value="track" ${leg.mode === 'track' ? 'selected' : ''} ${canTrack ? '' : 'disabled'}>Follow rover track</option>
@@ -220,14 +327,30 @@ function legCard(leg, step, isReturn) {
       <option value="direct" ${leg.mode === 'direct' ? 'selected' : ''}>Straight line</option></select></span>
     <span class="k">Ground</span><span>${leg.proven ? 'Driven by a rover' : `Known from orbit only ${field('caution')}`}</span>
     ${leg.searching ? '<span class="wide dim">Searching for a path over the terrain…</span>' : ''}
-    ${leg.noRoute ? `<span class="wide">${field('caution')} No path under the slope limit; straight line shown.</span>` : ''}
+    ${whyHTML(leg, step)}
+    ${leg.noRoute ? `<span class="wide">${field('warning')} No walkable path under the slope limit was found; the straight line shown is not a validated route.</span>` : ''}
   </div>`;
+}
+
+// Why the terrain engine chose this path: what the straight line would have crossed.
+function whyHTML(leg, step) {
+  const x = leg.explain;
+  if (leg.mode !== 'auto' || !x) return '';
+  const bits = [];
+  if (x.directOverM > 0) bits.push(`${fmtM(x.directOverM)} of ground steeper than the ${x.limitDeg}° limit`);
+  if (x.directKozM > 0) bits.push(`${fmtM(x.directKozM)} inside a keep-out zone`);
+  return `<div class="why"><span style="display:flex;justify-content:space-between"><b>Why this path</b>${IB('why')}</span>
+    <span>Straight line: ${fmtM(x.directM)}${bits.length ? `, but it crosses ${bits.join(' and ')}.` : x.directTimeS ? `, ${fmtMin(x.directTimeS)} on its slopes.` : '.'}</span>
+    <span>Chosen path: ${fmtM(x.pathM)}, ${fmtMin(step.t1S - step.t0S)} in the simulation, steepest ground ${step.maxSlopeDeg.toFixed(0)}°. ${bits.length ? 'It goes around that ground.' : x.directTimeS && x.pathTimeS < x.directTimeS ? `It is ${fmtMin(x.directTimeS - x.pathTimeS)} faster because it avoids the steeper slopes.` : 'The straight line is as good; the path follows it closely.'}</span>
+    <span class="dim">On the map: red cannot be crossed, yellow is slow, the thin dashed line is the straight line. ${S.set.explain ? '' : 'Colouring is off (View ▸ Explain routes in colour).'}</span></div>`;
 }
 
 function stationCard(i, step) {
   const st = S.plan.stations[i];
   const p = P.pointOf(st.at);
+  const ph = p.stop && p.stop.photo ? p.stop.photo : null;
   return `<div class="card">
+    ${ph ? `<figure><img src="${ph.file || ph.url}" alt="Curiosity's view at this station"><figcaption>What you will see here: Curiosity Navcam, sol ${ph.sol}${ph.looking ? `, looking ${ph.looking}` : ''}</figcaption></figure>` : ''}
     <span class="k">Position</span><span class="v">${fmtLat(p.lat)}, ${fmtLon(p.lon)}</span>
     <span class="k">Arrive / leave</span><span class="v">${step.lmst0} / ${step.lmst1} LMST</span>
     <span class="k">Work here</span><span class="step"><button data-act="dwell" data-i="${i}" data-delta="-15" aria-label="15 minutes less" ${dis()}>−</button><output>${st.dwellMin} min</output><button data-act="dwell" data-i="${i}" data-delta="15" aria-label="15 minutes more" ${dis()}>+</button></span>
@@ -235,9 +358,9 @@ function stationCard(i, step) {
     <span class="k">Oxygen on leaving</span><span class="v">${step.o2EndKg.toFixed(2)} kg</span>
     <span class="k">Walk home from here</span><span class="v">${fmtMin(step.homeEndS)}</span>
     <div class="acts">
-      <button class="btn pl" data-act="move" data-i="${i}" data-delta="-1" ${i === 0 ? 'disabled' : dis()}>Earlier</button>
-      <button class="btn pl" data-act="move" data-i="${i}" data-delta="1" ${i === S.plan.stations.length - 1 ? 'disabled' : dis()}>Later</button>
-      <button class="btn pl" data-act="remove" data-i="${i}" ${dis()}>Remove</button>
+      <button class="btn" data-act="move" data-i="${i}" data-delta="-1" ${i === 0 ? 'disabled' : dis()}>Earlier</button>
+      <button class="btn" data-act="move" data-i="${i}" data-delta="1" ${i === S.plan.stations.length - 1 ? 'disabled' : dis()}>Later</button>
+      <button class="btn" data-act="remove" data-i="${i}" ${dis()}>Remove</button>
     </div>
   </div>`;
 }
@@ -264,7 +387,7 @@ function renderActivity() {
     }
   });
   (S.plan.koz || []).forEach((z, k) => {
-    html += `<div class="row"><i class="dot kz"></i><span class="id">KOZ_${String(k + 1).padStart(2, '0')}</span><span class="d">Keep-out circle, r ${z.r} m</span><span class="n">${locked() ? '' : `<button class="btn pl" data-act="unkoz" data-i="${k}" style="min-height:20px;padding:0 6px">Remove</button>`}</span></div>`;
+    html += `<div class="row"><i class="dot kz"></i><span class="id">KOZ_${String(k + 1).padStart(2, '0')}</span><span class="d">Keep-out circle, r ${z.r} m</span><span class="n">${locked() ? '' : `<button class="btn" data-act="unkoz" data-i="${k}" style="min-height:20px;padding:0 6px">Remove</button>`}</span></div>`;
   });
   html += `<div class="note">${S.mode === 'sketch' ? 'Sketch mode: each click on the map adds a station at that point.'
     : S.mode === 'lock' ? 'Locked. Switch to Edit to change the plan.'
@@ -280,13 +403,13 @@ function renderCursor(pt) {
   cancelAnimationFrame(cursorRaf);
   cursorRaf = requestAnimationFrame(() => {
     const row = (k, v) => `<div class="pr"><span class="k">${k}</span><span class="v">${v}</span></div>`;
-    if (!pt) { $('#cursor').innerHTML = row('Lat (planetocentric)', '<span class="na">off map</span>') + row('Lon (east)', '') + row('SITE x, y', '') + row('Elevation', ''); return; }
+    if (!pt) { $('#cursor').innerHTML = row('Pointer', '<span class="na">move over the map</span>') + row('East, north of refuge', '') + row('Elevation', ''); return; }
     const ref = P.refugePt();
     const xy = localM(ref, pt);
     const e = S.grid ? S.T.elevAt(S.grid, pt.lat, pt.lon) : NaN;
     const sl = gridValue(S.slope, pt.lat, pt.lon);
-    $('#cursor').innerHTML = row('Lat (planetocentric)', fmtLat(pt.lat)) + row('Lon (east)', fmtLon(pt.lon))
-      + row('SITE x, y', `${xy.x.toFixed(0)}, ${xy.y.toFixed(0)} m`)
+    $('#cursor').innerHTML = row('Pointer lat, lon', `${fmtLat(pt.lat)}, ${fmtLon(pt.lon)}`)
+      + row('East, north of refuge', `${xy.x.toFixed(0)}, ${xy.y.toFixed(0)} m`)
       + row('Elevation', Number.isFinite(e) ? `${e.toFixed(1)} m${sl !== null && Number.isFinite(sl) ? ` · slope ${sl.toFixed(0)}°` : ''}` : '<span class="na">grid not loaded</span>');
   });
 }
@@ -299,14 +422,14 @@ function renderSim() {
   const state = (s) => (s === 'ok' ? '<span class="ok">OK</span>' : field(s));
   const w = S.site.weather;
   const age = Math.round((Date.now() - Date.parse(w.earth_date)) / 86400000);
-  $('#sim').innerHTML = `<div class="hd">Simulation <small>${sim.steps.length} steps · ${sim.samples.length} points</small></div>
-    <table><tr><th class="l">Consumable</th><th>Start</th><th>End</th><th>Change</th><th>State</th></tr>
+  $('#sim-sum').textContent = `${sim.steps.length} steps · ${fmtHM(sim.totals.durS)}`;
+  $('#sim').innerHTML = `<table><tr><th class="l">Consumable</th><th>Start</th><th>End</th><th>Change</th><th>State</th></tr>
     ${sim.consumables.map((c) => `<tr><td class="t">${esc(CONS[c.id] || c.title)}, ${esc(c.units)}</td><td>${fmt(c, c.start)}</td><td>${fmt(c, c.end)}</td><td>${fmt(c, Math.abs(c.used))}</td><td>${state(c.state)}</td></tr>`).join('')}</table>
     <div class="pr"><span class="k">Distance walked</span><span class="v">${fmtM(sim.totals.distM)}</span></div>
-    <div class="pr"><span class="k">EVA duration</span><span class="v">${fmtHM(sim.totals.durS)}</span></div>
+    <div class="pr"><span class="k">EVA duration</span><span class="v">${fmtHM(sim.totals.durS)}<span class="tag">Earth hours</span></span></div>
     <div class="pr"><span class="k">Likely range</span><span class="v">${fmtHM(sim.totals.durLowS)} to ${fmtHM(sim.totals.durHighS)}${TAG('DERIVED')}</span></div>
     <div class="pr"><span class="k">Back at refuge</span><span class="v">${esc(sim.totals.backLmst)} LMST · sunset ${clockH(parseClock(S.params.sunset) ?? S.sun.sunsetLmstH)}</span></div>
-    <div class="sub">Environment</div>
+    <div class="sub">Environment${IB('environment')}</div>
     ${pr('Radiation, this walk', `${M.doseMsv(sim.totals.durS / 3600).toFixed(2)} mSv`, 'DERIVED')}
     ${pr('Air temperature', `<b class="f fS" title="Stale data">S</b> ${w.air_min_c} to ${w.air_max_c} °C <span class="t dim">sol ${w.sol}, ${age} days old</span>`, 'MEASURED')}
     ${pr('Season', `L<sub>s</sub> ${S.sun.lsDeg.toFixed(0)}° · daylight ${S.sun.dayLengthH.toFixed(1)} Mars h`, 'DERIVED')}`;
@@ -314,10 +437,11 @@ function renderSim() {
 
 function renderRules() {
   const sim = S.sim;
-  $('#rules').innerHTML = `<div class="hd">Validation · flight rules <small>${sim.rules.filter((r) => r.level === 'pass').length} of ${sim.rules.length} pass</small></div>
-    ${sim.rules.map((r) => `<button class="rule" data-act="rule" data-id="${r.id}" title="Show where on the map">
+  const ne = sim.rules.filter((r) => r.level === 'unknown').length;
+  $('#rules-sum').textContent = `${sim.rules.filter((r) => r.level === 'pass').length} of ${sim.rules.length} pass${ne ? ` · ${ne} not evaluated` : ''}`;
+  $('#rules').innerHTML = [...sim.rules].sort((a, b) => RANK[b.level] - RANK[a.level] || a.id.localeCompare(b.id)).map((r) => `<div class="rule" role="button" tabindex="0" data-act="rule" data-id="${r.id}" title="Show where on the map" style="cursor:pointer">
       <span class="id">${r.id}</span><span>${esc(r.title)}<small class="${r.level === 'pass' ? 'one' : ''}" title="${esc(r.text)}">${esc(r.text)}</small></span>
-      <span class="st">${r.level === 'pass' ? '<span class="ok">PASS</span>' : field(r.level)}</span></button>`).join('')}`;
+      <span class="st" style="display:flex;gap:6px;align-items:center">${r.level === 'pass' ? '<span class="ok">PASS</span>' : field(r.level)}${IB(r.id)}</span></div>`).join('');
 }
 
 // ---------- probe ----------
@@ -352,7 +476,7 @@ const missing = (why) => `<b class="f fS">M</b> <span class="t">${why}</span>`;
 function mineralsHTML(s) {
   return P.samplesAt(s).map((sm) => {
     const whole = [sm.clay_pct !== null ? `clay ${sm.clay_pct}%` : '', sm.amorphous_pct !== null ? `non-crystalline ${sm.amorphous_pct}%` : ''].filter(Boolean).join(', ');
-    return `<div class="sub">Minerals in ${esc(sm.sample)} · CheMin, sol ${sm.sol}${TAG('MEASURED')}</div>
+    return `<div class="sub">Minerals in ${esc(sm.sample)} · CheMin, sol ${sm.sol}${TAG('MEASURED')}${IB('chemin')}</div>
       <div class="bars">${sm.minerals.slice(0, 5).map(([name, pct]) => `<div><span>${esc(name)}</span><i><b style="width:${Math.min(100, pct)}%"></b></i><em>${pct}%</em></div>`).join('')}</div>
       <div class="note">Shares of the crystalline part.${whole ? ` Of the whole sample: ${whole}.` : ''} <a href="${S.minerals.source_url}${sm.product}.lbl" target="_blank" rel="noopener">NASA PDS record</a></div>`;
   }).join('');
@@ -362,7 +486,8 @@ function renderProbe() {
   const el = $('#probe');
   const pt = S.probe;
   if (!pt) {
-    el.innerHTML = '<div class="hd">Probe</div><div class="note">Click anywhere on the map to read every layer at that point. Click a rover stop (tick on the track) for its photo and measurements.</div>';
+    $('#probe-sum').textContent = '';
+    el.innerHTML = '<div class="note">Click anywhere on the map to read every layer at that point. Click a rover stop (a tick on the track) for its photo and measurements. From a probed point you can add a station, park the refuge, mark a keep-out zone or leave a note.</div>';
     return;
   }
   const s = pt.stop ? S.byId.get(pt.stop) : null;
@@ -392,25 +517,27 @@ function renderProbe() {
   const vis = gridValue(S.vis, pt.lat, pt.lon);
   const lim = S.params.slopeLimitDeg ?? 20;
   const slopeV = slope !== null && Number.isFinite(slope) ? slope : orbit ? orbit[0] : null;
-  let rows = pr('Position', `${fmtLat(pt.lat)}, ${fmtLon(pt.lon)}`) + pr('SITE x, y', `${xy.x.toFixed(0)}, ${xy.y.toFixed(0)} m · ${fmtM(distM(ref, pt))} from refuge`);
-  rows += '<div class="sub">Terrain</div>';
+  let rows = pr('Position', `${fmtLat(pt.lat)}, ${fmtLon(pt.lon)}`) + pr('East, north of refuge', `${xy.x.toFixed(0)}, ${xy.y.toFixed(0)} m · ${fmtM(distM(ref, pt))} away`);
+  rows += `<div class="sub">Terrain${IB('terrain')}</div>`;
   if (s) rows += pr('Elevation (rover)', `${s.elev_m.toFixed(1)} m`, 'MEASURED') + pr('Rover tilt here', `${s.tilt_deg.toFixed(1)}°`, 'MEASURED');
   rows += pr('Elevation (orbit)', Number.isFinite(e) ? `${e.toFixed(1)} m` : missing('elevation grid not loaded'), Number.isFinite(e) ? 'MEASURED' : '');
   rows += pr('Slope, 6 m cells', slopeV === null ? missing('not available here') : `${slopeV.toFixed(1)}° ${slopeV > lim ? field('warning') : ''}`, slopeV === null ? '' : 'DERIVED');
   rows += pr('Ground', `<span class="t">${loose === 2 ? 'Loose sand or dust likely' : loose === 1 ? 'Mixed ground' : 'Firm or rocky'}</span>`, 'DERIVED');
   if (orbit && orbit[1] !== null) rows += pr('Thermal inertia', `${orbit[1]} TIU`, 'MEASURED');
-  rows += '<div class="sub">Getting home</div>';
-  rows += pr('Walk to refuge', homeS === null ? missing('terrain engine not ready') : Number.isFinite(homeS) ? `${fmtMin(homeS)} at emergency pace` : `no route under the block slope ${field('warning')}`, homeS === null ? '' : 'DERIVED');
+  rows += `<div class="sub">Getting home${IB('home')}</div>`;
+  rows += pr('Walk to refuge', homeS === null ? missing('terrain engine not ready') : Number.isFinite(homeS) ? `${fmtMin(homeS)} at emergency pace` : `<span class="t">more than 3 h, or no way round ground over the block slope</span> ${field('warning')}`, homeS === null ? '' : 'DERIVED');
   rows += pr('Line of sight to refuge', vis === null ? missing('terrain engine not ready') : vis ? 'Yes' : `No ${field('advisory')}`, vis === null ? '' : 'DERIVED');
   for (const extra of S.probeRows || []) rows += extra(pt, s) || '';
 
   const acts = locked() ? '' : `<div class="pad">
-    ${stationIndex >= 0 ? `<button class="btn pl" data-act="remove" data-i="${stationIndex}">Remove from walk</button>` : isRefuge ? '' : '<button class="btn" data-act="add">Add as station</button>'}
-    ${isRefuge ? '' : '<button class="btn pl" data-act="refuge">Park refuge here</button>'}
-    <button class="btn pl" data-act="koz" title="Mark a 30 m circle that routes must avoid">Add keep-out</button>
-    <button class="btn pl" data-act="unprobe">Clear</button></div>`;
+    ${stationIndex >= 0 ? `<button class="btn" data-act="remove" data-i="${stationIndex}">Remove from walk</button>` : isRefuge ? '' : '<button class="btn primary" data-act="add">Add as station</button>'}
+    ${isRefuge ? '' : '<button class="btn" data-act="refuge">Park refuge here</button>'}
+    <button class="btn" data-act="koz" title="Mark a 30 m circle that routes must avoid">Add keep-out</button>
+    <button class="btn" data-act="note" title="Leave a note on the map at this point">Add note</button>
+    <button class="btn" data-act="unprobe">Clear</button></div>`;
 
-  el.innerHTML = `<div class="hd">Probe <small>${s ? `rover stop · sol ${s.sol}` : 'map point'}</small></div>${head}${acts}${rows}${s ? mineralsHTML(s) : ''}`;
+  $('#probe-sum').textContent = s ? `rover stop · sol ${s.sol}` : 'map point';
+  el.innerHTML = `${head}${acts}${F.marksAtHTML(pt)}${rows}${s ? mineralsHTML(s) : ''}`;
 }
 
 // ---------- clocks and playback ----------
@@ -434,6 +561,13 @@ function buildClock() {
   $('#scrub').addEventListener('input', (e) => { S.tS = Number(e.target.value); renderLive(); });
 }
 
+// Sol number of a rover's mission: sol 0 is the landing sol and sols turn over at local midnight.
+function solNumber(r, epochMs) {
+  const landed = Date.parse(r.landed_utc);
+  const landingLmstH = M.marsLocalHours(landed, r.now.lon);
+  return Math.floor((epochMs - landed) / (SUN.SOL_LENGTH_S * 1000) + landingLmstH / 24);
+}
+
 function renderClock() {
   const now = Date.now();
   const ref = P.refugePt();
@@ -444,7 +578,7 @@ function renderClock() {
   $('#ck-utc').textContent = `${d.getUTCFullYear()}-${String(doy).padStart(3, '0')}T${d.toISOString().slice(11, 19)}`;
   $('#ck-lmst').textContent = clockH(sun.lmstH, true);
   $('#ck-ltst').textContent = clockH(sun.ltstH, true);
-  $('#ck-sol').textContent = curiosity ? Math.floor((now - Date.parse(curiosity.landed_utc)) / (SUN.SOL_LENGTH_S * 1000)) : '';
+  $('#ck-sol').textContent = curiosity ? solNumber(curiosity, now) : '';
   renderPlayhead();
 }
 
@@ -500,7 +634,7 @@ function sequenceHTML() {
     ${sim.steps.map((s) => `<tr class="${cur === s && S.tS > 0 ? 'cur' : ''}" data-act="seek" data-t="${s.t0S}" data-step="${s.i}">
       <td>${s.i + 1}</td><td>${pet(s.t0S)}</td><td>${pet(s.t1S)}</td><td>${s.lmst0}</td>
       <td class="l">${s.type === 'walk' ? (s.id === 'RETURN' ? 'RETURN' : 'WALK_TO') : 'WORK'}</td><td class="l">${s.type === 'walk' ? (s.id === 'RETURN' ? 'REFUGE' : esc(S.legs.find((l) => l.id === s.id)?.to || '')) : s.id}</td>
-      <td class="t">${args(s)}</td><td>${Math.round(s.meanWatts)}</td><td>${s.o2EndKg.toFixed(2)}</td><td>${Math.round(s.homeEndS / 60)}</td><td>${(s.flags || []).map((id) => { const r = ruleOf(id); return r && r.level !== 'pass' ? `<b class="f f${LETTER[r.level]}" title="${esc(r.id)} ${esc(r.title)}">${LETTER[r.level]}</b>` : ''; }).join(' ')}</td></tr>`).join('')}</table>`;
+      <td class="t">${args(s)}</td><td>${Math.round(s.meanWatts)}</td><td>${s.o2EndKg.toFixed(2)}</td><td>${Math.round(s.homeEndS / 60)}</td><td>${(s.flags || []).map((id) => { const r = ruleOf(id); return r && r.level !== 'pass' ? `<b class="f ${FCLASS[r.level]}" title="${esc(r.id)} ${esc(r.title)}">${LETTER[r.level]}</b>` : ''; }).join(' ')}</td></tr>`).join('')}</table>`;
 }
 
 // The plan against the clock, with two strips under it: walk-home time against its limit, and oxygen left.
@@ -536,14 +670,14 @@ function timelineHTML(W) {
   // Strip charts read off the simulated samples.
   const strip = (y0, h, value, max, limit, limitLabel) => {
     const y = (v) => y0 + h - (clamp(v, 0, max) / max) * h;
-    const pts = sim.samples.map((q) => `${x(q.tS).toFixed(1)},${y(value(q)).toFixed(1)}`).join(' ');
+    const pts = sim.samples.filter((q) => Number.isFinite(value(q)) && Number.isFinite(q.tS)).map((q) => `${x(q.tS).toFixed(1)},${y(value(q)).toFixed(1)}`).join(' ');
     let out = `<line x1="${padL}" y1="${y0 + h}" x2="${W - padR}" y2="${y0 + h}" stroke="${C.line}"/><polyline points="${pts}" fill="none" stroke="${C.text}" stroke-width="1.5"/>`;
     if (limit !== null) out += `<line x1="${padL}" y1="${y(limit)}" x2="${W - padR}" y2="${y(limit)}" stroke="${C.warn}" stroke-dasharray="4 3"/><text x="${W - padR}" y="${y(limit) - 3}" text-anchor="end" style="fill:${C.warn}">${limitLabel}</text>`;
     return out;
   };
   const fr1 = ruleOf('FR-01');
   const limMin = fr1 ? fr1.limit : 60;
-  const maxHome = Math.max(limMin * 1.15, ...sim.samples.map((q) => q.homeS / 60));
+  const maxHome = Math.max(limMin * 1.15, ...sim.samples.map((q) => q.homeS / 60).filter(Number.isFinite));
   g += strip(60, 34, (q) => q.homeS / 60, maxHome, limMin, `limit ${limMin} min`);
   const o2Start = Number(S.params.o2StartKg) || 1;
   g += strip(104, 34, (q) => q.o2Kg, o2Start, null, '');
@@ -602,24 +736,26 @@ function layersHTML() {
     if (!defs.length) return '';
     return `<div><div class="sub">${group}</div>${defs.map((d) => {
       const avail = d.avail();
-      const onNow = d.kind === 'fill' ? S.fill === d.id : d.cat === 'base' || S.on.has(d.id);
+      const onNow = d.kind === 'fill' ? MV.effectiveFill() === d.id : d.cat === 'base' || S.on.has(d.id);
       const input = d.cat === 'base' ? '<input type="checkbox" checked disabled title="Always shown">'
-        : `<input type="${d.kind === 'fill' ? 'radio' : 'checkbox'}" name="${d.kind === 'fill' ? 'fill' : d.id}" data-layer="${d.id}" ${onNow ? 'checked' : ''} ${avail ? '' : 'disabled'}>`;
+        : `<input id="lay-${d.id}" type="${d.kind === 'fill' ? 'radio' : 'checkbox'}" name="${d.kind === 'fill' ? 'fill' : d.id}" data-layer="${d.id}" ${onNow ? 'checked' : ''} ${avail ? '' : 'disabled'}>`;
       const ramp = d.ramp && avail ? `<span class="ramp">${d.ramp().map(([c, l]) => `<i style="background:${c}"></i>${l}`).join(' ')}</span>` : '';
       const why = !avail ? ' · not loaded' : d.minZoom && z < d.minZoom ? ' · zoom in to see it' : d.cat === 'base' ? ' · always shown' : '';
-      return `<label class="lay${avail ? '' : ' off'}">${input}<span>${esc(d.title)}${TAG(d.tag)}<small>${esc(d.prov)}${why}</small>${ramp}</span></label>`;
+      const url = MV.sourceUrl(d.id);
+      return `<div class="lay${avail ? '' : ' off'}">${input}<label for="lay-${d.id}"><b>${esc(d.title)}</b>${TAG(d.tag)}<small>${esc(d.prov)}${why}</small>${ramp}</label>
+        ${url ? `<a class="golink" href="${url}" target="_blank" rel="noopener" title="Open the source of this data">Source ↗</a>` : '<span></span>'}</div>`;
     }).join('')}</div>`;
   }).join('');
-  return `<div class="pad"><span class="k">Colour fill</span><label><input type="radio" name="fill" data-layer="none" ${S.fill === 'none' ? 'checked' : ''}> None</label>
+  return `<div class="pad"><span class="k">Colour fill</span><label><input type="radio" name="fill" data-layer="none" ${MV.effectiveFill() === 'none' ? 'checked' : ''}> None</label>
     <span class="dim">One colour fill at a time; patterns, lines and points stack on top. ${S.custom ? `Custom set, from ${MV.PRESETS.find((p) => p.id === S.preset).title}.` : ''}</span>
-    ${S.custom ? `<button class="btn pl" data-act="preset" data-id="${S.preset}">Reset to preset</button>` : ''}</div><div class="cols">${cols}</div>`;
+    ${S.custom ? `<button class="btn" data-act="preset" data-id="${S.preset}">Reset to preset</button>` : ''}</div><div class="cols">${cols}</div>`;
 }
 
 function roversHTML() {
   const SOL = SUN.SOL_LENGTH_S * 1000;
   const date = (r, sol) => new Date(Date.parse(r.landed_utc) + sol * SOL).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   const card = (r) => {
-    const today = Math.floor((Date.now() - Date.parse(r.landed_utc)) / SOL);
+    const today = solNumber(r, Date.now());
     return `<div><div class="sub">${esc(r.name)} · ${esc(r.place)}</div>
       ${pr('Position', `${fmtLat(r.now.lat)}, ${fmtLon(r.now.lon)}`, 'MEASURED')}
       ${pr('Elevation', `${r.now.elev_m.toFixed(0)} m`)}
@@ -627,7 +763,7 @@ function roversHTML() {
       ${pr('Today is', `sol ${today}${today > r.now.sol ? ` · parked ${today - r.now.sol} sols` : ''}`, 'DERIVED')}
       ${pr('Driven since landing', `${(r.now.dist_total_m / 1000).toFixed(2)} km`)}
       <div class="note">${r.live ? `Read from NASA's position feed at ${S.roversAt.toISOString().slice(11, 16)} UTC.` : `NASA's feed was not reached. Showing the snapshot from ${esc(S.roversSnapshot)}.`} <a href="${r.map}" target="_blank" rel="noopener">NASA location map</a></div>
-      <div class="pad"><button class="btn pl" data-act="rover" data-id="${r.id}">Show on map</button></div></div>`;
+      <div class="pad"><button class="btn" data-act="rover" data-id="${r.id}">Show on map</button></div></div>`;
   };
   const [a, b] = S.rovers;
   const rad = Math.PI / 180;
@@ -635,7 +771,7 @@ function roversHTML() {
   const km = (2 * S.site.meta.mars_radius_m * Math.asin(Math.sqrt(h))) / 1000;
   return `<div class="cols">${card(a)}${card(b)}<div><div class="sub">Between them</div>${pr('Across Mars', `${Math.round(km).toLocaleString('en-GB')} km`, 'DERIVED')}
     <div class="note">A position is where the rover stopped after its last drive, not a live fix. Planning is on Curiosity's ground at Gale; Perseverance is shown for context.</div>
-    <div class="pad"><button class="btn pl" data-act="rover" data-id="both">Show both</button><button class="btn pl" data-act="rover" data-id="walk">Back to the walk</button></div></div></div>`;
+    <div class="pad"><button class="btn" data-act="rover" data-id="both">Show both</button><button class="btn" data-act="rover" data-id="walk">Back to the walk</button></div></div></div>`;
 }
 
 function sourcesHTML() {
@@ -648,18 +784,20 @@ function sourcesHTML() {
 }
 
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([id, label]) => `<button role="tab" data-act="tab" data-id="${id}" aria-selected="${S.tab === id}">${label}${id === 'layers' ? ` (${MV.LAYERS.filter((l) => l.avail()).length})` : ''}</button>`).join('');
+  const count = { layers: MV.LAYERS.filter((l) => l.avail()).length, notes: S.marks.length, history: S.history.length };
+  $('#tabs').innerHTML = `${TABS.map(([id, label]) => `<button role="tab" data-act="tab" data-id="${id}" aria-selected="${S.tab === id}">${label}${count[id] ? ` (${count[id]})` : ''}</button>`).join('')}<span class="grow"></span>${IB(S.tab)}`;
 }
 
 function renderTab() {
   const body = $('#tabbody');
   const W = Math.max(520, body.clientWidth - 2);
-  body.innerHTML = { sequence: sequenceHTML, timeline: () => timelineHTML(W), profile: () => profileHTML(W), layers: layersHTML, rovers: roversHTML, sources: sourcesHTML }[S.tab]();
+  body.innerHTML = { sequence: sequenceHTML, timeline: () => timelineHTML(W), profile: () => profileHTML(W), layers: layersHTML, rovers: roversHTML, sources: sourcesHTML,
+    notes: () => F.tabHTML('notes'), history: () => F.tabHTML('history') }[S.tab]();
 }
 
 function renderConsole() {
   const el = $('#conbody');
-  const line = (at, level, text) => `<p><span>[${at.toISOString().slice(11, 19)}]</span>${level === 'status' ? '<i>Status</i>' : `<b class="f f${level}">${level}</b>`}<span style="color:inherit;flex:1">${esc(text)}</span></p>`;
+  const line = (at, level, text) => `<p><span>[${at.toISOString().slice(11, 19)}]</span>${level === 'status' ? '<i>Status</i>' : `<b class="f ${level === 'NE' ? 'fS' : `f${level}`}">${level}</b>`}<span style="color:inherit;flex:1">${esc(text)}</span></p>`;
   const now = new Date();
   const current = S.sim ? S.sim.rules.filter((r) => r.level !== 'pass').map((r) => line(now, LETTER[r.level], `${r.id} ${r.text}`)).join('') : '';
   el.innerHTML = `${S.log.map((l) => line(l.at, l.level, l.text)).join('')}<p class="div">Current plan: ${S.sim ? S.sim.rules.filter((r) => r.level !== 'pass').length : 0} open flags</p>${current}`;
@@ -679,7 +817,7 @@ function renderPreset() {
   $('#preset').innerHTML = `<span class="k">Layer preset</span>${MV.PRESETS.map((p) => {
     const ready = !p.needs || (p.needs === 'grid' ? !!S.grid : !!S.home);
     return `<button data-act="preset" data-id="${p.id}" class="${S.preset === p.id && !S.custom ? 'on' : ''}" ${ready ? '' : 'disabled title="Needs the terrain engine"'} style="${ready ? '' : `color:${C.off}`}">${p.title}</button>`;
-  }).join('')}<span class="state">${S.custom ? 'Custom · ' : ''}Fill: ${S.fill === 'none' ? 'none' : esc(MV.LAYERS.find((l) => l.id === S.fill)?.title || '')}</span>`;
+  }).join('')}<button class="ib" data-info="preset" aria-label="About presets">i</button><span class="state">${S.custom ? 'Custom · ' : ''}Fill: ${MV.effectiveFill() === 'none' ? 'none' : esc(MV.LAYERS.find((l) => l.id === MV.effectiveFill())?.title || '')}</span>`;
   $('#legend-body').innerHTML = MV.legendHTML();
 }
 
@@ -735,7 +873,7 @@ function renderCuff() {
     ${sketch}
     <table><tr><th></th><th>Station</th><th style="text-align:right">Leave by</th></tr>${rows}
       <tr><td class="n">R</td><td><b>Home: ${esc(ref.name)}</b><div class="legline">${fmtM(ret.lengthM)} from the last station · back ${esc(sim.totals.backLmst)} LMST</div></td><td class="by"></td></tr></table>
-    <div class="big">${v.go ? 'PLAN IS GO · MARGIN' : 'PLAN IS NO-GO'}<b>${v.go ? signedMin(v.marginMin) : esc(v.limiting)}</b>Tightest rule: ${esc(v.limiting)} ${esc(ruleOf(v.limiting)?.title || '')}.</div>
+    <div class="big">${v.go ? 'PLAN IS GO · MARGIN' : `PLAN IS ${v.label}`}<b>${v.go ? signedMin(v.marginMin) : esc((v.blocking.length ? v.blocking : v.unknown).join(' ') || '—')}</b>${v.go ? `Tightest rule: ${esc(v.limiting)} ${esc(ruleOf(v.limiting)?.title || '')}.` : v.blocking.length ? `Blocked by: ${v.blocking.map((id) => `${id} ${esc(ruleOf(id)?.title || '')}`).join('; ')}.` : 'Not cleared: some rules could not be evaluated.'}</div>
     <p class="crule"><b>Rules.</b> Stay within ${S.params.emergencyReturnMin} min of the refuge at emergency pace. Keep oxygen for the walk home plus ${S.params.reserveMin} min. Be home ${S.params.reserveMin} min before sunset.</p>
     ${open.length ? `<p class="crule"><b>Open flags.</b> ${open.map((r) => `[${LETTER[r.level]}] ${esc(r.id)} ${esc(r.text)}`).join(' ')}</p>` : ''}
     <p class="fine">Assumed ${S.params.speedKmh} km/h on level ground, ${S.params.o2StartKg} kg oxygen at egress. Bearings are straight lines between stations. Route and imagery: NASA/JPL-Caltech. Data snapshot ${esc(S.site.meta.snapshot_utc)}.</p>`;
@@ -747,6 +885,7 @@ function renderCuff() {
 function renderLive() {
   renderPlayhead();
   playheadMoved();
+  emit('playhead');
   MV.drawPlan();
   if (S.tab === 'sequence' || S.tab === 'timeline' || S.tab === 'profile') renderTab();
   const cur = P.stepAt(S.sim, S.tS);
@@ -772,6 +911,7 @@ function render() {
   renderTab();
   renderConsole();
   renderStatus();
+  MV.syncLayers();      // the route explanation fill depends on the plan
   MV.drawPlan();
   renderPreset();
 }
@@ -793,13 +933,15 @@ function select(sel) {
 
 function pick(pt) {
   if (S.mode === 'sketch' && !pt.stop) {
+    if (S.grid && !S.T.cellOf(S.grid, pt.lat, pt.lon).inside) return log('C', 'That point is outside the elevation grid (Gale Crater, around the rover track); a station cannot be placed there');
     S.plan.stations.push({ at: { lat: pt.lat, lon: pt.lon, name: `Point ${S.plan.stations.length + 1}` }, dwellMin: 20, effort: 'moderate', leg: S.grid ? 'auto' : 'direct' });
     if (S.plan.ret === 'track') S.plan.ret = S.grid ? 'auto' : 'direct';
     S.sel = { type: 'station', i: S.plan.stations.length - 1 };
     S.probe = { lat: pt.lat, lon: pt.lon };
     log('status', `Station ${P.stationId(S.plan.stations.length - 1)} added at ${fmtLat(pt.lat)}, ${fmtLon(pt.lon)}`);
     save();
-    return render();
+    render();
+    return F.commit(`Station ${P.stationId(S.plan.stations.length - 1)} sketched`);
   }
   if (pt.stop) { const s = S.byId.get(pt.stop); if (s.photoState === 'offline') s.photoState = null; }
   S.probe = pt;
@@ -812,9 +954,11 @@ function pick(pt) {
 function act(action, el) {
   const d = el.dataset;
   const i = d.i === undefined ? undefined : Number(d.i);
+  if (F.handle(action, d, el)) return;
   // Looking never changes the plan.
   if (action === 'sel') return select(isSel(d.type, i) ? null : { type: d.type, i });
   if (action === 'tab') { S.tab = d.id; renderTabs(); return renderTab(); }
+  if (action === 'reset' && !locked() && !d.sure) return UI.dialog({ title: 'Reset plan and INCONS?', body: '<p>The plan goes back to the ready-made walk and every initial condition to its default. You can undo this.</p>', buttons: [{ label: 'Cancel' }, { label: 'Reset', cmd: 'reset-go', primary: true }] });
   if (action === 'preset') { MV.applyPreset(d.id); renderPreset(); return S.tab === 'layers' && renderTab(); }
   if (action === 'mode') { S.mode = d.id; log('status', `Mode: ${d.id}`); MV.map.getContainer().style.cursor = d.id === 'sketch' ? 'crosshair' : ''; return render(); }
   if (action === 'cuff') { renderCuff(); $('#cuff-sheet').hidden = false; return; }
@@ -875,10 +1019,16 @@ function act(action, el) {
     emitRefugeMoved();
   }
   if (action === 'unkoz') { S.plan.koz.splice(i, 1); log('status', 'Keep-out zone removed'); emitRefugeMoved(); }
-  if (action === 'reset') { loadTrip(S.trip, true); log('status', 'Plan and INCONS reset'); emitRefugeMoved(); }
+  if (action === 'koz' || action === 'unkoz') MV.invalidate('pace');
+  if (action === 'reset') { loadTrip(S.cfg.trips.some((t) => t.id === S.trip) ? S.trip : S.cfg.trips[0].id, true); log('status', 'Plan and INCONS reset'); emitRefugeMoved(); }
   save();
   render();
+  F.commit(LABEL[action] ? LABEL[action](i) : action);
 }
+const LABEL = {
+  add: () => `Station ${P.stationId(S.plan.stations.length - 1)} added`, remove: (i) => `Station ${P.stationId(i)} removed`, move: () => 'Stations reordered', refuge: () => 'Refuge moved',
+  dwell: (i) => `Work time at ${P.stationId(i)} set to ${S.plan.stations[i].dwellMin} min`, koz: () => 'Keep-out zone added', unkoz: () => 'Keep-out zone removed', reset: () => 'Plan and INCONS reset',
+};
 
 // The cost field and line-of-sight map depend on where the refuge is.
 let refugeMoved = () => {};
@@ -891,21 +1041,31 @@ function wire() {
   });
   document.body.addEventListener('change', (e) => {
     const el = e.target;
-    if (el.id === 'trip') { loadTrip(el.value); save(); emitRefugeMoved(); render(); return MV.fitPlan(); }
+    if (el.id === 'trip') return F.openPlan(el.value);
+    if (el.closest('.dialog, .noteform')) return;
     if (el.dataset.layer !== undefined) {
-      if (el.dataset.layer === 'none') MV.toggleLayer(S.fill, false); else MV.toggleLayer(el.dataset.layer, el.checked);
+      if (el.dataset.layer === 'none') { if (S.fill === 'none') { S.custom = true; MV.syncLayers(); } else MV.toggleLayer(S.fill, false); } else MV.toggleLayer(el.dataset.layer, el.checked);
       renderPreset();
       return renderTab();
     }
     if (locked()) return;
     if (el.dataset.param) {
       const key = el.dataset.param;
-      const kind = PARAMS.find((p) => p[0] === key)[3];
-      if (kind === 'clock') { if (parseClock(el.value) !== null || (key === 'sunset' && el.value === '')) S.params[key] = el.value; }
-      else if (Number(el.value) > 0 || key === 'reserveMin') S.params[key] = Math.max(0, Number(el.value) || 0);
-      if (key === 'slopeLimitDeg') MV.invalidate('nogo', 'slope');
-      if (key === 'speedKmh' || key === 'slopeLimitDeg') emitRefugeMoved();
+      const [, label, unit, kind, lo, hi] = PARAMS.find((p) => p[0] === key);
+      if (kind === 'clock') {
+        if (parseClock(el.value) !== null || (key === 'sunset' && el.value === '')) S.params[key] = el.value;
+        else { log('C', `${label}: "${el.value}" is not a time; use HH:MM`); return render(); }
+      } else {
+        const n = Number(el.value);
+        if (el.value.trim() === '' || !Number.isFinite(n) || n < lo || n > hi) { log('C', `${label}: ${el.value || 'nothing'} is outside ${lo} to ${hi} ${unit}; kept ${S.params[key]}`); return render(); }
+        S.params[key] = key === 'crew' ? Math.round(n) : n;
+      }
+      // The emergency walk home cannot be planned faster than the crew plans to walk at all.
+      if (key === 'speedKmh' && S.params.emergencySpeedKmh > S.params.speedKmh) { S.params.emergencySpeedKmh = S.params.speedKmh; log('status', `Emergency return pace lowered to ${S.params.speedKmh} km/h to match the walking speed`); }
+      if (key === 'slopeLimitDeg') MV.invalidate('nogo', 'slope', 'pace');
+      if (key === 'speedKmh' || key === 'emergencySpeedKmh' || key === 'slopeLimitDeg') emitRefugeMoved();
       if (key === 'emergencyReturnMin') { S.limitMask = null; MV.invalidate('limit', 'home'); }
+      if (key === 'egress') MV.invalidate('shade', 'shadow');
     } else if (el.dataset.legmode !== undefined) {
       if (el.dataset.legmode === 'ret') S.plan.ret = el.value; else S.plan.stations[Number(el.dataset.legmode)].leg = el.value;
     } else if (el.dataset.effort !== undefined) {
@@ -913,6 +1073,7 @@ function wire() {
     } else return;
     save();
     render();
+    F.commit(el.dataset.param ? `INCONS: ${PARAMS.find((p) => p[0] === el.dataset.param)[1]} set to ${el.value}` : el.dataset.effort !== undefined ? 'Work effort changed' : 'Leg path changed');
   });
 
   // Timeline: click or drag to move the playhead.
@@ -933,7 +1094,7 @@ function wire() {
 
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, select, textarea')) return;
-    if (e.key === ' ') { e.preventDefault(); setPlaying(!S.playing); }
+    if (e.key === ' ' && !e.target.matches('button, [role="button"], a')) { e.preventDefault(); setPlaying(!S.playing); }
     if (e.key === 'Escape') { $('#cuff-sheet').hidden = true; }
   });
   $('#cuff-print').addEventListener('click', () => window.print());
@@ -948,6 +1109,10 @@ function wire() {
   on('log', renderConsole);
   on('layers', () => { renderPreset(); if (S.tab === 'layers') renderTab(); renderTabs(); });
   on('data', () => render());
+  // Rule rows and other role="button" elements answer to Enter and Space.
+  document.body.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"][data-act]')) { e.preventDefault(); act(e.target.dataset.act, e.target); }
+  });
 }
 
 // Ask NASA where each rover is right now. If a feed cannot be reached, the bundled snapshot stays.
@@ -967,7 +1132,23 @@ async function refreshRovers() {
   if (S.tab === 'rovers') renderTab();
 }
 
+// What the features module may call back into.
+const app = {
+  cleanParams: (raw) => cleanParams(raw), locked: () => locked(),
+  render: () => render(), renderLive: () => renderLive(), renderProbe: () => renderProbe(), renderTab: () => { renderTabs(); renderTab(); },
+  save: () => save(), loadTrip: (id) => loadTrip(id), setPlaying: (v) => setPlaying(v), act: (action, data) => act(action, { dataset: data || {} }),
+  planChanged: (fit) => { emitRefugeMoved(); save(); render(); if (fit) MV.fitPlan(); },
+};
+
 async function main() {
+  UI.loadStep('data', 'Rover track, stops and ready-made walks');
+  UI.loadStep('map', 'Map and orbital imagery');
+  UI.loadStep('sim', 'First simulation and flight rules');
+  UI.loadStep('science', 'Science layers: minerals, water, chemistry');
+  UI.loadStep('terrain', 'Elevation grid and terrain engine');
+  UI.loadMark('data', 'on');
+  UI.initWorkspace();
+  UI.initUI((key) => infoOf(key, MV.LAYERS.map((l) => ({ ...l, url: MV.sourceUrl(l.id) }))));
   const [site, cfg, rovers, minerals, overlays, contours] = await Promise.all(
     ['data/site.json', 'data/targets.json', 'data/rovers.json', 'data/minerals.json', 'data/overlays/overlays.json', 'data/overlays/contours.json'].map((u) => fetch(u).then((r) => r.json())));
   Object.assign(S, { site, cfg, minerals, overlays, contours, rovers: rovers.rovers, roversSnapshot: rovers.snapshot_utc });
@@ -976,21 +1157,33 @@ async function main() {
   loadTrip(cfg.trips[0].id);
   loadSaved();
   S.sun = SUN.marsSun(Date.now(), P.refugePt().lat, P.refugePt().lon);
+  UI.loadMark('data', 'ok');
+  UI.loadMark('map', 'on');
   MV.initMap();
   buildClock();
   wire();
   log('status', `Loaded ${site.stops.length.toLocaleString('en-GB')} rover stops and ${(site.route[site.route.length - 1][3] / 1000).toFixed(1)} km of track`);
+  UI.loadMark('map', 'ok');
+  UI.loadMark('sim', 'on');
   recompute();
   MV.fitPlan();
+  await F.init(app);
   MV.applyPreset('plan');
   render();
+  UI.loadMark('sim', 'ok');
+  UI.loadMark('science', 'on');
   renderCursor(null);
   renderClock();
   setInterval(renderClock, 1000);
   refreshRovers();
   // Terrain grid, baked science layers and the analyses that need them arrive after the first paint.
   window.tenacity = { S, map: () => MV.map };   // for inspection from the browser console
-  refugeMoved = await initData({ render, renderProbe });
+  S.ready = false;      // until the terrain engine and the forecast data are in, the verdict is provisional
+  // The interface is usable now; the science layers and the terrain engine finish loading behind it.
+  setTimeout(() => { UI.loadFinish(); F.afterFirstPaint(); }, 500);
+  refugeMoved = await initData({ render, renderProbe, mark: UI.loadMark });
+  S.ready = true;
+  render();
 }
 
 main();

@@ -25,7 +25,7 @@ const PANES = [['fill', 300], ['pattern', 350], ['lines', 400], ['limits', 450],
 export const PRESETS = [
   { id: 'plan', title: 'Plan', fill: 'none', grey: 0.55, on: ['hirise', 'relief', 'track', 'stops', 'samples', 'rovers', 'limit'] },
   { id: 'terrain', title: 'Terrain hazard', fill: 'slope', grey: 0.9, on: ['hirise', 'loose', 'relief', 'track'] },
-  { id: 'science', title: 'Science', fill: 'none', grey: 0, on: ['hirise', 'track', 'stops', 'samples', 'dan', 'apxs', 'names', 'rovers'] },
+  { id: 'science', title: 'Science', fill: 'none', grey: 0, on: ['hirise', 'track', 'regions', 'stops', 'samples', 'dan', 'apxs', 'names', 'rovers'] },
   { id: 'light', title: 'Light + comms', fill: 'shade', grey: 0.9, on: ['hirise', 'shadow', 'nolos', 'track'], needs: 'grid' },
   { id: 'reach', title: 'Reach', fill: 'home', grey: 0.9, on: ['hirise', 'track', 'limit', 'relief'], needs: 'home' },
 ];
@@ -47,13 +47,34 @@ export function toggleLayer(id, onNow) {
   syncLayers();
 }
 
-const isOn = (def) => (def.kind === 'fill' ? S.fill === def.id : def.cat === 'base' || S.on.has(def.id));
+// The colour fill on the map. When a path was found over the terrain and no other fill is chosen,
+// the walking-difficulty fill is shown so it is clear what the path avoided (unless that is switched off).
+export function effectiveFill() {
+  if (S.fill !== 'none') return S.fill;
+  const explaining = S.set && S.set.explain && S.preset === 'plan' && !S.custom && S.legs.some((l) => l.mode === 'auto' && !l.searching) && LAYERS.some((l) => l.id === 'pace' && l.avail());
+  return explaining ? 'pace' : 'none';
+}
+const isOn = (def) => (def.kind === 'fill' ? effectiveFill() === def.id : def.id === 'nogo' ? effectiveFill() !== 'pace' : def.cat === 'base' || S.on.has(def.id));
+
+// Where each layer's data comes from, for the "Source" buttons.
+const TREK = 'https://trek.nasa.gov/mars/';
+const LOCMAP = 'https://science.nasa.gov/mission/msl-curiosity/location-map/';
+const SOURCE = {
+  hirise: LOCMAP, names: LOCMAP, track: LOCMAP, rovers: 'https://science.nasa.gov/mission/mars-2020-perseverance/location-map/', stops: 'https://mars.nasa.gov/msl/multimedia/raw-images/',
+  nogo: TREK, slope: TREK, relief: TREK, elev: TREK, rough: TREK, shade: TREK, shadow: TREK, nolos: TREK, home: TREK, pace: TREK,
+  limit: 'https://ntrs.nasa.gov/api/citations/20170009505/downloads/20170009505.pdf',
+  loose: 'https://jmars.asu.edu/', ti: 'https://jmars.asu.edu/', nightir: 'https://themis.asu.edu/',
+  crism_hyd: 'https://pds-geosciences.wustl.edu/missions/mro/crism.htm', crism_phy: 'https://pds-geosciences.wustl.edu/missions/mro/crism.htm', crism_fm2: 'https://pds-geosciences.wustl.edu/missions/mro/crism.htm',
+  samples: 'https://pds-geosciences.wustl.edu/missions/msl/chemin.htm', apxs: 'https://pds-geosciences.wustl.edu/missions/msl/apxs.htm', dan: 'https://doi.org/10.5281/zenodo.6974535',
+  regions: 'https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/', geology: 'https://pubs.usgs.gov/sim/3292/',
+};
+export const sourceUrl = (id) => { const def = LAYERS.find((l) => l.id === id); return (def && def.url) || SOURCE[id] || null; };
 
 export function syncLayers() {
   if (!map) return;
   const z = map.getZoom();
   const preset = PRESETS.find((x) => x.id === S.preset);
-  $('#map').style.setProperty('--map-grey', S.fill !== 'none' ? 0.9 : preset.grey);
+  $('#map').style.setProperty('--map-grey', effectiveFill() !== 'none' ? 0.9 : preset.grey);
   for (const def of LAYERS) {
     const want = isOn(def) && def.avail() && z >= (def.minZoom || 0);
     if (want && !G[def.id]) G[def.id] = def.make();
@@ -167,7 +188,7 @@ const PATTERNS = {
 
 // A pattern drawn at screen resolution and cut to a mask, so marks keep their size at every zoom.
 // getMask returns a canvas whose opaque cells are where the pattern shows.
-function patternLayer(getMask, bounds, pattern) {
+function patternLayer(getMask, bounds, pattern, smooth = false) {
   const canvas = L.DomUtil.create('canvas');
   canvas.style.pointerEvents = 'none';
   const [[south, west], [north, east]] = bounds;
@@ -188,7 +209,7 @@ function patternLayer(getMask, bounds, pattern) {
     const nw = map.latLngToContainerPoint([north, west]);
     const se = map.latLngToContainerPoint([south, east]);
     ctx.globalCompositeOperation = 'destination-in';
-    ctx.imageSmoothingEnabled = (se.x - nw.x) / mask.width < 3;
+    ctx.imageSmoothingEnabled = smooth || (se.x - nw.x) / mask.width < 3;
     ctx.drawImage(mask, nw.x, nw.y, se.x - nw.x, se.y - nw.y);
     ctx.globalCompositeOperation = 'source-over';
   };
@@ -446,11 +467,35 @@ export function initMap() {
 
   define();
   G.dyn = L.layerGroup().addTo(map);
-  if (!reduced) smoothWheel();
+  if (!reduced && (!S.set || S.set.smoothZoom)) smoothWheel(); else map.scrollWheelZoom.enable();
 
   map.on('mousemove', (e) => emit('cursor', { lat: e.latlng.lat, lon: e.latlng.lng }));
   map.on('mouseout', () => emit('cursor', null));
-  map.on('click', (e) => emit('pick', { lat: e.latlng.lat, lon: e.latlng.lng }));
+  // One click handler for the whole map. The layers are drawn on stacked canvases and the top one
+  // would swallow a click meant for a rover stop underneath, so the nearest thing under the pointer
+  // is found here instead: a station, a note, then a rover stop, else the bare ground.
+  map.on('click', (e) => {
+    const here = e.containerPoint;
+    const near = (p, px) => map.latLngToContainerPoint(ll(p)).distanceTo(here) <= px;
+    if (S.mode !== 'sketch') {
+      const i = S.plan.stations.findIndex((st) => near(P.pointOf(st.at), 11));
+      if (i >= 0) return emit('select', { type: 'station', i });
+      const m = (S.marks || []).find((x) => near(x, 11));
+      if (m) return emit('pick', { lat: m.lat, lon: m.lon });
+      const z = map.getZoom();
+      const shown = (id) => { const def = LAYERS.find((l) => l.id === id); return def && isOn(def) && def.avail() && z >= (def.minZoom || 0); };
+      const pool = shown('stops') ? S.site.stops : S.site.stops.filter((s) => (shown('samples') && P.samplesAt(s).length) || (shown('apxs') && S.science.apxs && S.science.apxs.stops[s.id]));
+      let best = null;
+      let bd = 13;
+      for (const s of pool) {
+        if (Math.abs(s.lat - e.latlng.lat) > 0.01) continue;
+        const d = map.latLngToContainerPoint(ll(s)).distanceTo(here);
+        if (d < bd) { bd = d; best = s; }
+      }
+      if (best) return emit('pick', { stop: best.id, lat: best.lat, lon: best.lon });
+    }
+    emit('pick', { lat: e.latlng.lat, lon: e.latlng.lng });
+  });
   let settle = 0;
   map.on('zoomend', () => { clearTimeout(settle); settle = setTimeout(() => { syncLayers(); drawPlan(); }, 140); });
   map.setMaxBounds([[-85, -180], [85, 360]]);
@@ -531,13 +576,33 @@ export function drawPlan() {
   // Planned legs: solid on ground a rover has driven, dashed where only orbital data exists.
   S.legs.forEach((leg) => add(cased(leg.line, C.route, 4, leg.proven ? {} : { dashArray: '9 7' })));
 
-  // Ground covered up to the playhead.
+  // The straight lines the path finder rejected, with the parts that cannot be walked in red.
+  if (S.set && S.set.explain) {
+    for (const leg of S.legs) {
+      if (!leg.explain) continue;
+      add(L.polyline(leg.explain.straight, { pane: 'route', color: '#fff', weight: 1.5, opacity: 0.85, dashArray: '3 7', interactive: false }));
+      for (const run of leg.explain.bad) add(L.polyline(run, { pane: 'route', color: C.warn, weight: 5, opacity: 0.95, interactive: false, lineCap: 'butt' }));
+    }
+  }
+
+  // Ground covered up to the playhead, and where the crew is: always marked, at the refuge before the walk starts.
+  const here = S.tS > 0 ? P.positionAt(sim, S.tS) : P.refugePt();
   if (S.tS > 0) {
-    const here = P.positionAt(sim, S.tS);
     const done = sim.samples.filter((q) => q.tS <= S.tS).map(ll);
     done.push(ll(here));
     if (done.length > 1) add(L.polyline(done, { pane: 'route', color: '#fff', weight: 2, interactive: false }));
-    add(L.marker(ll(here), { icon: L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 10], html: CREW }), zIndexOffset: 900, interactive: false }));
+  }
+  if (S.set && S.set.crewPulse) add(L.marker(ll(here), { icon: L.divIcon({ className: '', iconSize: [34, 34], iconAnchor: [17, 17], html: '<div class="crew-pulse"></div>' }), zIndexOffset: 880, interactive: false }));
+  add(L.marker(ll(here), { icon: L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 10], html: CREW }), zIndexOffset: 900, interactive: false }));
+  add(L.marker(ll(here), { icon: flag('crew', S.tS > 0 ? 'CREW' : 'CREW · at the refuge', -30, 30), zIndexOffset: 890, interactive: false }));
+
+  // The crew's own notes and marks.
+  for (const m of S.marks || []) {
+    const letter = { note: 'N', hazard: '!', sample: 'S', photo: 'P' }[m.kind] || 'N';
+    const edge = m.kind === 'hazard' ? C.caut : '#fff';
+    add(L.marker(ll(m), { icon: L.divIcon({ className: '', iconSize: [18, 18], iconAnchor: [9, 9], html: `<svg width="18" height="18"><rect x="1.5" y="1.5" width="15" height="15" fill="#161616" stroke="${edge}" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="11" font-weight="700" fill="${edge}" font-family="sans-serif">${letter}</text></svg>` }), zIndexOffset: 350, title: m.title || 'Note' })
+      .on('click', (e) => { L.DomEvent.stopPropagation(e); emit('pick', { lat: m.lat, lon: m.lon }); }));
+    if (close && m.title) add(L.marker(ll(m), { icon: flag(m.kind === 'hazard' ? 'C' : 'mark', esc(m.title), 22, -22), interactive: false, zIndexOffset: 340 }));
   }
 
   // Distance walked, posted along the way out like the posts on a trail.
@@ -622,7 +687,10 @@ export function legendHTML() {
   const rows = [[SWATCH.route, 'Planned leg, ground a rover has driven'], [SWATCH.dashed, 'Planned leg, orbital data only'],
     ...((S.plan.koz || []).length ? [[SWATCH.koz, 'Keep-out zone']] : []),
     [SWATCH.station, `Station, ${TOLERANCE_M} m arrival tolerance`], [SWATCH.star, 'Refuge: start and return']];
+  rows.push([`<svg width="36" height="18" viewBox="-9 0 36 18">${CREW.replace(/<\/?svg[^>]*>/g, '')}</svg>`, 'Where the crew is']);
   if (S.tS > 0) rows.push([SWATCH.walked, 'Covered at the playhead']);
+  if (S.set && S.set.explain && S.legs.some((l) => l.explain)) rows.push([`<svg width="36" height="8"><path d="M0 4h36" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 6"/><path d="M12 4h12" stroke="${C.warn}" stroke-width="5"/></svg>`, 'Straight line the path finder rejected (red: cannot be walked)']);
+  if ((S.marks || []).length) rows.push(['<svg width="36" height="18"><rect x="10.5" y="1.5" width="15" height="15" fill="#161616" stroke="#fff" stroke-width="2"/><text x="18" y="13" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="sans-serif">N</text></svg>', 'Crew note or mark']);
   if (S.sim && S.sim.rules.some((r) => (r.level === 'caution' || r.level === 'warning') && (r.segments || []).length)) rows.push([SWATCH.caution, 'Stretch that breaks a rule (yellow caution, red warning)']);
   const z = map ? map.getZoom() : 0;
   for (const def of LAYERS) {

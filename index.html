@@ -4,56 +4,89 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tenacity · EVA planner for Mars</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230d0d0d'/%3E%3Crect x='5' y='19' width='7' height='7' fill='%23f2f2f2'/%3E%3Cpath d='M12 22.5C19 22.5 16 9 24.5 9' fill='none' stroke='%23ff5cf4' stroke-width='2.4'/%3E%3Ccircle cx='24.5' cy='9' r='3' fill='none' stroke='%23f2f2f2' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%23262626'/%3E%3Crect x='5' y='19' width='7' height='7' fill='%23f2f2f2'/%3E%3Cpath d='M12 22.5C19 22.5 16 9 24.5 9' fill='none' stroke='%23ff5cf4' stroke-width='2.4'/%3E%3Ccircle cx='24.5' cy='9' r='3' fill='none' stroke='%23f2f2f2' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="preload" href="vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="vendor/fonts/dm-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Docked panes, edge to edge: title and status on top, plan on the left, map in the middle,
-       simulation and rules on the right, clocks under the map, sequence and console at the bottom. -->
+  <!-- Shown until the plan, the map and the first simulation are on screen. -->
+  <div id="loading" role="status" aria-live="polite">
+    <div class="load-box">
+      <svg class="load-mark" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="40" width="14" height="14" fill="#f2f2f2"/><path d="M22 47C40 47 32 16 52 16" fill="none" stroke="#ff5cf4" stroke-width="4"/><circle cx="52" cy="16" r="6" fill="none" stroke="#f2f2f2" stroke-width="3.5"/></svg>
+      <h1>TENACITY</h1>
+      <p class="load-sub">EVA planner for Mars · Gale Crater</p>
+      <div class="load-bar"><i id="load-fill"></i></div>
+      <ul id="load-steps"></ul>
+      <p class="load-foot">NASA Space Apps Challenge 2026 · not affiliated with NASA</p>
+    </div>
+  </div>
+
+  <!-- Docked panes: menu and toolbar, plan status, then plan | map | simulation, clocks, and the sequence dock.
+       Every dock edge can be dragged; panels can be collapsed or hidden from the Windows menu. -->
   <div id="app">
+    <div id="menubar">
+      <span class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="19" width="7" height="7" fill="#f2f2f2"/><path d="M12 22.5C19 22.5 16 9 24.5 9" fill="none" stroke="#ff5cf4" stroke-width="2.6"/><circle cx="24.5" cy="9" r="3" fill="none" stroke="#f2f2f2" stroke-width="2"/></svg><b>Tenacity</b></span>
+      <nav id="menus" aria-label="Menus"></nav>
+      <span class="grow"></span>
+      <div id="toolbar" role="toolbar" aria-label="Tools"></div>
+    </div>
+
     <header id="titlebar" class="bar">
-      <div><h1>TENACITY EVA PLANNER</h1></div>
-      <div><label class="k" for="trip">Plan</label><select id="trip" aria-label="Choose a plan"></select></div>
-      <div><span class="k">Mode</span><div class="seg" id="mode" role="group" aria-label="Mode"></div></div>
-      <div id="verdict" class="grow" role="status" aria-live="polite"></div>
+      <div data-tour="plan"><label class="k" for="trip">Plan</label><select id="trip" aria-label="Choose a plan"></select></div>
+      <div data-tour="mode"><span class="k">Mode</span><div class="seg" id="mode" role="group" aria-label="Mode"></div></div>
+      <div id="verdict" class="grow" role="status" aria-live="polite" data-tour="verdict"></div>
       <div id="alerts" aria-label="Alert counts"></div>
-      <div><button class="btn pl" data-act="cuff">Cuff card</button></div>
     </header>
 
-    <div id="mid">
-      <aside class="dock l" aria-label="Activity list">
-        <div class="hd">Activity list <small id="act-sum"></small></div>
-        <div id="activity"></div>
-        <div class="hd">Cursor</div>
-        <div id="cursor"></div>
+    <div id="work">
+      <aside class="dock l" id="dock-l" aria-label="Plan">
+        <section class="panel grow" data-panel="activity">
+          <div class="hd"><button class="tw" data-act="collapse" data-id="activity" aria-label="Collapse or expand"></button><span class="ttl">Activity list</span><small id="act-sum"></small><span class="hd-tools"><button class="ib" data-info="activity" aria-label="About this panel">i</button><button class="ib" data-act="hidepanel" data-id="activity" aria-label="Hide panel">×</button></span></div>
+          <div class="bd" id="activity"></div>
+        </section>
+        <section class="panel" data-panel="locator">
+          <div class="hd"><button class="tw" data-act="collapse" data-id="locator" aria-label="Collapse or expand"></button><span class="ttl">Where on Mars</span><span class="hd-tools"><button class="ib" data-info="locator" aria-label="About this panel">i</button><button class="ib" data-act="hidepanel" data-id="locator" aria-label="Hide panel">×</button></span></div>
+          <div class="bd"><div id="locator"></div><div id="cursor"></div></div>
+        </section>
       </aside>
+      <div class="split v" data-split="left" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
 
-      <main id="mapwrap">
-        <div id="preset" role="group" aria-label="Layer preset"></div>
+      <main id="mapwrap" data-tour="map">
+        <div id="preset" role="group" aria-label="Layer preset" data-tour="preset"></div>
         <div id="map" aria-label="Map of the walk"></div>
-        <div id="north" aria-hidden="true">N ↑</div>
-        <details id="legend" open><summary>Legend</summary><div class="g" id="legend-body"></div></details>
+        <div id="crumb" aria-live="polite"></div>
+        <details id="legend"><summary>Legend</summary><div class="g" id="legend-body"></div></details>
+        <div id="viz" hidden></div>
       </main>
 
-      <aside class="dock r" aria-label="Simulation, rules and probe">
-        <div id="sim"></div>
-        <div id="rules"></div>
-        <div id="probe"></div>
+      <div class="split v" data-split="right" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
+      <aside class="dock r" id="dock-r" aria-label="Simulation, rules and probe">
+        <section class="panel" data-panel="sim">
+          <div class="hd"><button class="tw" data-act="collapse" data-id="sim" aria-label="Collapse or expand"></button><span class="ttl">Simulation</span><small id="sim-sum"></small><span class="hd-tools"><button class="ib" data-info="sim" aria-label="About this panel">i</button><button class="ib" data-act="hidepanel" data-id="sim" aria-label="Hide panel">×</button></span></div>
+          <div class="bd" id="sim"></div>
+        </section>
+        <section class="panel" data-panel="rules">
+          <div class="hd"><button class="tw" data-act="collapse" data-id="rules" aria-label="Collapse or expand"></button><span class="ttl">Flight rules</span><small id="rules-sum"></small><span class="hd-tools"><button class="ib" data-info="rules" aria-label="About this panel">i</button><button class="ib" data-act="hidepanel" data-id="rules" aria-label="Hide panel">×</button></span></div>
+          <div class="bd" id="rules"></div>
+        </section>
+        <section class="panel grow" data-panel="probe">
+          <div class="hd"><button class="tw" data-act="collapse" data-id="probe" aria-label="Collapse or expand"></button><span class="ttl">Probe</span><small id="probe-sum"></small><span class="hd-tools"><button class="ib" data-info="probe" aria-label="About this panel">i</button><button class="ib" data-act="hidepanel" data-id="probe" aria-label="Hide panel">×</button></span></div>
+          <div class="bd" id="probe"></div>
+        </section>
       </aside>
     </div>
 
-    <div id="clock" class="bar" aria-label="Clocks and playback"></div>
+    <div id="clock" class="bar" aria-label="Clocks and playback" data-tour="clock"></div>
+    <div class="split h" data-split="bottom" role="separator" aria-orientation="horizontal" title="Drag to resize"></div>
 
-    <div id="bot">
+    <div id="bot" data-panel="bottom">
       <section>
         <nav class="tabs" id="tabs" role="tablist"></nav>
         <div id="tabbody"></div>
       </section>
-      <section id="con" aria-label="Console">
-        <nav class="tabs"><button aria-selected="true">Console</button></nav>
+      <section id="con" aria-label="Console" data-panel="console">
+        <nav class="tabs"><span class="tabttl">Console</span><span class="grow"></span><button class="ib" data-info="console" aria-label="About the console">i</button></nav>
         <div id="conbody" role="log"></div>
       </section>
     </div>
@@ -63,11 +96,14 @@
 
   <div id="cuff-sheet" hidden>
     <div class="cuff-actions">
-      <button id="cuff-print" class="btn">Print</button>
-      <button id="cuff-close" class="btn pl">Close</button>
+      <button id="cuff-print" class="btn primary">Print</button>
+      <button id="cuff-close" class="btn">Close</button>
     </div>
     <article id="cuff"></article>
   </div>
+
+  <!-- Overlays made by js/ui.js: menus, dialogs, info pop-ups, search, and the guided tour. -->
+  <div id="overlays"></div>
 
   <script src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="js/app.js"></script>
