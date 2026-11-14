@@ -4,51 +4,51 @@
 @font-face { font-family: "Inter"; src: url("../../vendor/fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
 @page { size: 1920px 1080px; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { background: #161616; }
-body { font-family: "Segoe UI", "Inter", system-ui, sans-serif; color: #dedede; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.slide { width: 1920px; height: 1080px; position: relative; overflow: hidden; page-break-after: always; break-after: page; background: #1b1b1b; padding: 84px 96px 96px; display: flex; flex-direction: column; }
+html, body { background: #0B3D91; }
+body { font-family: "Segoe UI", "Inter", system-ui, sans-serif; color: #e9eefb; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.slide { width: 1920px; height: 1080px; position: relative; overflow: hidden; page-break-after: always; break-after: page; background: #0B3D91; padding: 84px 96px 96px; display: flex; flex-direction: column; }
 .slide:last-child { page-break-after: auto; break-after: auto; }
 .kicker { font-size: 26px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #ff5cf4; margin-bottom: 14px; }
 h1 { font-size: 120px; font-weight: 700; letter-spacing: 0.02em; color: #fff; line-height: 1.02; }
 h2 { font-size: 60px; font-weight: 700; color: #fff; line-height: 1.1; max-width: 1500px; }
 p, li { font-size: 30px; line-height: 1.36; }
-.lead { font-size: 42px; color: #f2f2f2; max-width: 1400px; margin-top: 22px; }
+.lead { font-size: 42px; color: #fff; max-width: 1400px; margin-top: 22px; }
 .cols { display: grid; gap: 52px; flex: 1; margin-top: 36px; min-height: 0; }
 .c2 { grid-template-columns: 1fr 1fr; } .c37 { grid-template-columns: 37fr 63fr; } .c42 { grid-template-columns: 42fr 58fr; }
 ul { list-style: none; display: grid; gap: 20px; align-content: start; }
 li { padding-left: 34px; position: relative; }
 li::before { content: ""; position: absolute; left: 0; top: 17px; width: 14px; height: 14px; background: #ff5cf4; }
 b { color: #fff; }
-.shot { border: 2px solid #3d3d3d; background: #000; overflow: hidden; align-self: start; }
+.shot { border: 2px solid rgba(255,255,255,0.55); background: #000; overflow: hidden; align-self: start; }
 .shot img { display: block; width: 100%; }
-.cap { font-size: 22px; color: #a9a9a9; margin-top: 10px; }
-.foot { position: absolute; left: 96px; right: 96px; bottom: 34px; display: flex; justify-content: space-between; font-size: 20px; color: #7c7c7c; }
+.cap { font-size: 22px; color: #c9d6f2; margin-top: 10px; }
+.foot { position: absolute; left: 96px; right: 96px; bottom: 34px; display: flex; justify-content: space-between; font-size: 20px; color: #c9d6f2; }
 .num { display: inline-grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: #fff; color: #000; font-weight: 700; font-size: 30px; margin-right: 18px; flex: none; }
 .step { display: flex; align-items: flex-start; font-size: 30px; line-height: 1.34; }
 .steps { display: grid; gap: 26px; align-content: start; }
 .fact { border-left: 6px solid #ffd60a; padding: 6px 0 6px 26px; }
 .fact b { display: block; font-size: 64px; line-height: 1.05; }
-.fact span { font-size: 30px; color: #dedede; }
+.fact span { font-size: 30px; color: #e9eefb; }
 .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; margin-top: 56px; }
 table { border-collapse: collapse; width: 100%; font-size: 28px; }
-th { text-align: left; color: #a9a9a9; font-weight: 600; font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 0 12px; border-bottom: 2px solid #404040; }
-td { padding: 16px 20px 16px 0; border-bottom: 1px solid #333; vertical-align: top; }
-td:first-child { color: #a9a9a9; width: 44%; }
+th { text-align: left; color: #c9d6f2; font-weight: 600; font-size: 24px; letter-spacing: 0.06em; text-transform: uppercase; padding: 0 0 12px; border-bottom: 2px solid rgba(255,255,255,0.5); }
+td { padding: 16px 20px 16px 0; border-bottom: 1px solid rgba(255,255,255,0.28); vertical-align: top; }
+td:first-child { color: #c9d6f2; width: 44%; }
 .chips { display: flex; flex-wrap: wrap; gap: 12px; align-content: start; }
-.chips span { border: 2px solid #555; padding: 6px 14px; font-size: 24px; color: #f2f2f2; background: #262626; }
-.chips span i { font-style: normal; color: #a9a9a9; }
+.chips span { border: 2px solid rgba(255,255,255,0.5); padding: 6px 14px; font-size: 24px; color: #fff; background: rgba(0,0,0,0.28); }
+.chips span i { font-style: normal; color: #c9d6f2; }
 .go { display: inline-block; background: #4ade80; color: #000; font-weight: 700; padding: 2px 22px; }
 .nogo { display: inline-block; background: #b3001b; color: #fff; font-weight: 700; padding: 2px 22px; }
 .tags { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
-.tags span { font-size: 24px; letter-spacing: 0.08em; border: 2px solid #7c7c7c; padding: 4px 14px; color: #dedede; }
-.link { font-size: 28px; color: #4b9cf5; line-height: 1.4; }
+.tags span { font-size: 24px; letter-spacing: 0.08em; border: 2px solid rgba(255,255,255,0.6); padding: 4px 14px; color: #fff; }
+.link { font-size: 28px; color: #fff; line-height: 1.4; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.5); }
 .title { justify-content: flex-end; padding-bottom: 150px; }
 .title .bg { position: absolute; inset: 0; background: url("../img/flyover_wide.jpg") center top / cover; }
-.title .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(22,22,22,0.05) 0%, rgba(22,22,22,0.35) 36%, rgba(22,22,22,0.99) 60%); }
+.title .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,61,145,0.05) 0%, rgba(11,61,145,0.45) 34%, rgba(11,61,145,1) 58%); }
 .title > *:not(.bg):not(.shade) { position: relative; }
-.team { margin-top: 36px; font-size: 32px; color: #dedede; display: grid; gap: 6px; }
+.team { margin-top: 36px; font-size: 32px; color: #e9eefb; display: grid; gap: 6px; }
 .team b { color: #fff; }
-.small { font-size: 26px; color: #a9a9a9; }
+.small { font-size: 26px; color: #c9d6f2; }
 </style></head><body>
 
 <section class="slide title">
@@ -57,7 +57,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
   <h1>PROJECT TENACITY</h1>
   <p class="lead">Plan the walk on Mars before you take it. An EVA planner that sketches, simulates and validates a crew's route on real NASA data.</p>
   <div class="team"><span>Team <b>{{TEAM}}</b></span><span>{{MEMBERS}}</span></div>
-  <div class="foot"><span>Project Tenacity</span><span>1 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -70,7 +69,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
   </div>
   <p class="lead" style="margin-top:64px">A crew needs one answer before they step outside: <b>can we go, and get home?</b></p>
   <p class="cap" style="margin-top:auto">Sources: NASA xEMU life-support description (NTRS 20170009505); NASA Artemis III surface requirements (NTRS 20210026296).</p>
-  <div class="foot"><span>Project Tenacity</span><span>2 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -88,7 +86,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
     </div>
     <div><div class="shot"><img src="../img/planner.jpg" alt="The Tenacity planner"></div><p class="cap">The working tool: plan on the left, map in the middle, simulation and flight rules on the right, command sequence below.</p></div>
   </div>
-  <div class="foot"><span>Project Tenacity</span><span>3 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -103,7 +100,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
     </div>
     <div><div class="shot"><img src="../img/why_map.jpg" alt="A sketched route with the ground it avoids coloured"></div><p class="cap">A sketched station: the dashed white line is the straight line the path finder rejected; the route goes around ground steeper than 20°.</p></div>
   </div>
-  <div class="foot"><span>Project Tenacity</span><span>4 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -121,7 +117,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
     </div>
     <div><div class="shot"><img src="../img/science_map.jpg" alt="Science preset with named regions"></div><p class="cap">Science view: the named regions on Curiosity's route up Mount Sharp, four in the colours of NASA's own route map.</p></div>
   </div>
-  <div class="foot"><span>Project Tenacity</span><span>5 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -135,7 +130,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
     </ul>
     <div><div class="shot"><img src="../img/flyover_map.jpg" alt="3D flyover of the route"></div><p class="cap">"Visualize path": the route draws itself over Mount Sharp's boxwork ridges; red hatching is ground too steep for a suit.</p></div>
   </div>
-  <div class="foot"><span>Project Tenacity</span><span>6 / 7</span></div>
 </section>
 
 <section class="slide">
@@ -156,6 +150,6 @@ td:first-child { color: #a9a9a9; width: 44%; }
     </div>
     <div><div class="shot"><img src="../img/nogo_map.jpg" alt="A plan rejected by the flight rules"></div><p class="cap">Next: a date for each plan, crew position tracking, and measured walking data when it exists.</p></div>
   </div>
-  <div class="foot"><span>Slides and much of the code were prepared with an AI assistant (Claude) under the team's direction; screenshots show the working tool. Not affiliated with NASA.</span><span>7 / 7</span></div>
+  <div class="foot"><span>Slides and much of the code were prepared with an AI assistant (Claude) under the team's direction; screenshots show the working tool. Not affiliated with NASA.</span></div>
 </section>
 </body></html>
