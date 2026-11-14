@@ -6,6 +6,16 @@ Built for the NASA Space Apps Challenge 2026, "Interplanetary Survival Guide: Ma
 
 Live: https://yara-hue24.github.io/Project-Tenacity/
 
+## Screenshots
+
+| | |
+|---|---|
+| ![The planner](screenshots/01-planner.jpg) The planner: plan, map, simulation, flight rules, sequence | ![Why this path](screenshots/02-route-explanation.jpg) Why this path: red cannot be crossed, yellow is slow |
+| ![3D flyover](screenshots/03-3d-flyover.jpg) Visualize path: 3D flyover with Curiosity's photo of the station | ![Science regions](screenshots/04-science-regions.jpg) Science regions on Curiosity's route up Mount Sharp |
+| ![A rejected plan](screenshots/05-no-go.jpg) A walk the flight rules reject | ![Guided tour](screenshots/06-guided-tour.jpg) The guided tour |
+
+Demo slides: [docs/Tenacity-demo-slides.pdf](docs/Tenacity-demo-slides.pdf) · Project description: [docs/Tenacity-project-description.pdf](docs/Tenacity-project-description.pdf)
+
 ## The idea
 
 Rover drivers at JPL plan every drive in a tool suite called RSVP: they sketch the drive on the terrain, simulate it, and validate it before sending it to Mars. Tenacity gives a walking astronaut the same loop. The comparison below is ours, drawn from JPL's description of the suite and from figures in a JPL paper on Perseverance drive planning (Rankin et al. 2023, linked in the app).
