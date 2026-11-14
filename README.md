@@ -62,7 +62,7 @@ Tenacity is a professional tool, not a public outreach site. It is built for two
 - **Astronauts**, who plan the walk and then follow it.
 - **Mission operations personnel** (flight controllers, EVA officers and planners), who have to clear it before the crew leaves.
 
-That is why the interface is dense, speaks in flight rules and NASA alert conventions, and shows its numbers and their sources instead of hiding them. A guided tour is built in for anyone seeing it for the first time (Help ▸ Guided tour).
+**We chose completeness over simplicity, on purpose.** A tool for trained users should keep every rule, number and source in view, not hide detail to look simpler. That is why the interface is dense, speaks in flight rules and NASA alert conventions, and shows its numbers and their sources instead of hiding them. A guided tour is built in for anyone seeing it for the first time (Help ▸ Guided tour).
 
 ## The idea
 

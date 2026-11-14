@@ -376,7 +376,7 @@ export function startTour() {
 }
 function offerTour() {
   UI.dialog({ title: 'Welcome to Tenacity', body: `<p>An EVA planner for walking on Mars. You lay out a walk at Gale Crater, the tool simulates it on real NASA terrain data, and flight rules say <b>GO</b> or <b>NO-GO</b>.</p>
-    <p class="dim">The two-minute tour points at each part of the screen with a blinking box.</p>`,
+    <p class="dim">The screen is dense on purpose. Tenacity is designed for astronauts and mission operations staff, not for the general public, so every rule, number and source stays in view. The two-minute tour points at each part of the screen with a blinking box.</p>`,
   buttons: [{ label: 'Skip', cmd: 'tourskip' }, { label: 'Start the tour', cmd: 'tour', primary: true }] });
 }
 
@@ -610,6 +610,7 @@ function command({ name, data, el }) {
     keys: () => UI.dialog({ title: 'Keyboard shortcuts', body: `<table>${[['Ctrl + K', 'Search'], ['Ctrl + Z / Ctrl + Y', 'Undo / redo'], ['Space', 'Play or pause the walk'], ['← / →', 'Previous or next step (also in the tour)'], ['V', 'Visualize path'], ['F', 'Show the whole walk'], ['Esc', 'Close a dialog, a menu or the tour']].map(([k, v]) => `<tr><td class="l">${k}</td><td class="t">${v}</td></tr>`).join('')}</table>` }),
     about: () => UI.dialog({ title: 'About Tenacity', body: `<p>An EVA planner for walking on Mars, built for the NASA Space Apps Challenge 2026, "Interplanetary Survival Guide: Martian Map".</p>
       <p>It follows the way rover drivers at JPL plan a drive (sketch, simulate, validate) and applies it to a crew on foot at Gale Crater, on real NASA data: the Curiosity rover's track and measurements, and orbital imagery, elevation and mineral maps.</p>
+      <p>It is deliberately not simplified. It is designed for trained users (astronauts and mission operations staff), not for the general public, so it keeps every rule, number and source in view instead of hiding detail for a simpler screen.</p>
       <p class="dim">Every number is tagged MEASURED, NASA VALUE, DERIVED or ASSUMED. Walking speed and effort on Mars have never been measured; they are assumptions. Not affiliated with or endorsed by NASA.</p>`,
     buttons: [{ label: 'Where the data comes from', cmd: 'sources' }, { label: 'Close', primary: true }] }),
   }[name];
